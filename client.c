@@ -6,7 +6,12 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include "map.h"
+#include <signal.h>
 
+void signalHandlerWin(int signum) {
+	printf("Sei riuscito ad uscire dalla mappa...\n");
+	exit(0);
+}
 void sendCommand(int sockfd, const char * command) {
 	if(command == NULL) return;
 	if(strcmp(command, "exit") == 0) {
@@ -16,6 +21,11 @@ void sendCommand(int sockfd, const char * command) {
 	send(sockfd, command, strlen(command), 0);
 }
 int main(int argc, char* argv[]) {
+	struct sigaction sa;
+	sa.sa_handler = signalHandlerWin;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0; // NON SA_RESTART
+	sigaction(SIGUSR1, &sa, NULL);
 	if(argc < 2) {
 		printf("<program> + <ip address>\n");
 		exit(1);
@@ -64,6 +74,7 @@ int main(int argc, char* argv[]) {
 			break;
 		}
 		visited[x][y] = 1;
+		system("clear");
 		adjVisit(width, height, x, y, visited);
 		printMapBlurred(map, width, height, x, y, visited);
 	}
