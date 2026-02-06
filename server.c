@@ -63,46 +63,73 @@ void gaming(int user, char * username, int log, char ** map, int width, int heig
         startingY = rand() % width;
     } while(map[startingX][startingY] != PATH);
 
-	sendMap(user, map, width, height, startingX, startingY);
-	char buffer[256];
-	while(1) {
-		int readedbyte = recv(user, buffer, sizeof(buffer)-1,0);
-		if(readedbyte < 0) { perror("lettura comando"); exit(1); }
-		buffer[readedbyte] = '\0';
-		if(strcmp(buffer, "exit") == 0) {
+    sendMap(user, map, width, height, startingX, startingY);
+    char buffer[256];
+    
+    while(1) {
+        int readedbyte = recv(user, buffer, sizeof(buffer)-1, 0);
+        if(readedbyte <= 0) { 
             printf("Client disconnesso\n");
             fflush(stdout);
+            break;
         }
-        //controlla anche se i giocatori sono riusciti ad usire dalla mappa
-        if(strcmp(buffer, "W") == 0 && startingX == 0 && map[startingX][startingY] == PATH) {
-            writeScore(username, collectedItems);
-            kill(user, SIGUSR1);
+        buffer[readedbyte] = '\0';
+        
+        if(strcmp(buffer, "exit") == 0) {
+            printf("Client disconnesso\n");
             fflush(stdout);
-        }
-        if(strcmp(buffer, "S") == 0 && startingX == height-1 && map[startingX][startingY] == PATH) {
-            writeScore(username, collectedItems);
-            kill(user, SIGUSR1);
-            fflush(stdout);
-        }
-        if(strcmp(buffer, "A") == 0 && startingY == 0 && map[startingX][startingY] == PATH) {
-            writeScore(username, collectedItems);
-            kill(user, SIGUSR1);
-            fflush(stdout);
-        }
-        if(strcmp(buffer, "D") == 0 && startingY == width-1 && map[startingX][startingY] == PATH) {
-            writeScore(username, collectedItems);
-            kill(user, SIGUSR1);
-            fflush(stdout);
+            break;
         }
 
-        if(strcmp(buffer, "W") == 0) { if(startingX > 0 && map[startingX-1][startingY] != WALL) startingX--; /* muovi su */ }
-        else if(strcmp(buffer, "S") == 0) { if(startingX < height-1 && map[startingX+1][startingY] != WALL) startingX++; /* muovi giù */ }
-        else if(strcmp(buffer, "A") == 0) { if(startingY > 0 && map[startingX][startingY-1] != WALL) startingY--; /* muovi sinistra */ }
-        else if(strcmp(buffer, "D") == 0) { if(startingY < width-1 && map[startingX][startingY+1] != WALL) startingY++; /* muovi destra */ }
-		else printf("Comando sconosciuto\n");
         write(log, "COMMAND: ", 9);
-		write(log, buffer, readedbyte);
-		write(log, "\n", 1);
+        write(log, buffer, readedbyte);
+        write(log, "\n", 1);
+
+        // Controlla vittoria PRIMA del movimento
+        int hasWon = 0;
+        if(strcmp(buffer, "W") == 0 && startingX == 0) {
+            hasWon = 1;
+        }
+        else if(strcmp(buffer, "S") == 0 && startingX == height-1) {
+            hasWon = 1;
+        }
+        else if(strcmp(buffer, "A") == 0 && startingY == 0) {
+            hasWon = 1;
+        }
+        else if(strcmp(buffer, "D") == 0 && startingY == width-1) {
+            hasWon = 1;
+        }
+
+        if(hasWon) {
+            send(user, "WIN", 3, 0);
+            write(log, "USER: ", 6);
+            write(log, username, strlen(username));
+            write(log, " WON!\n", 6);
+            writeScore(username, collectedItems);
+            printf("User %s ha vinto!\n", username);
+            fflush(stdout);
+            break;  // ESCE SENZA inviare altra mappa
+        }
+
+        // Movimento
+        if(strcmp(buffer, "W") == 0) { 
+            if(startingX > 0 && map[startingX-1][startingY] != WALL) 
+                startingX--;
+        }
+        else if(strcmp(buffer, "S") == 0) { 
+            if(startingX < height-1 && map[startingX+1][startingY] != WALL) 
+                startingX++;
+        }
+        else if(strcmp(buffer, "A") == 0) { 
+            if(startingY > 0 && map[startingX][startingY-1] != WALL) 
+                startingY--;
+        }
+        else if(strcmp(buffer, "D") == 0) { 
+            if(startingY < width-1 && map[startingX][startingY+1] != WALL) 
+                startingY++;
+        }
+
+        // Gestione item
         pthread_mutex_lock(&mutex);
         while(mapChanging) {
             pthread_cond_wait(&cond, &mutex);
@@ -113,14 +140,18 @@ void gaming(int user, char * username, int log, char ** map, int width, int heig
             collectedItems++; 
             write(log, "USER: ", 6);
             write(log, username, strlen(username));
-            write(log, " COLLECTED AN ITEM!\n", 21);
+            write(log, " COLLECTED ITEM\n", 16);
         }
         mapChanging = 0;
         pthread_cond_signal(&cond);
         pthread_mutex_unlock(&mutex);
+        
         sendMap(user, map, width, height, startingX, startingY);
-	}
+    }
 }
+
+
+
 
 void *newUser(void* data) {
     int client = ((struct data*)data)->user;
