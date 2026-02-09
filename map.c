@@ -171,29 +171,37 @@ void printMapAdjacent(char **map, int width, int height, int x, int y) {
 }
 */
 
-void sendBlurredMap(int sockfd, char **map, int width, int height, int x, int y, int visited[height][width]) {
-    // 1. invio dimensioni
-    if(send(sockfd, "B", sizeof(char), 0) != sizeof(char)) perror("send type");
-    if(send(sockfd, &width, sizeof(int), 0) != sizeof(int)) perror("send width");
-    if(send(sockfd, &height, sizeof(int), 0) != sizeof(int)) perror("send height");
-    if(send(sockfd, &x, sizeof(int), 0) != sizeof(int)) perror("send x");
-    if(send(sockfd, &y, sizeof(int), 0) != sizeof(int)) perror("send y");
+void sendBlurredMap(int sockfd, char **map, int width, int height, int x, int y, int **visited) {
+    if (!map || !visited) return;
 
-    // 2. invio dati riga per riga
-    for(int i=0; i<height; i++) {
+    // 1. Invio intestazione e tipo 'B'
+    char type = 'B';
+    send(sockfd, &type, sizeof(char), 0);
+    send(sockfd, &width, sizeof(int), 0);
+    send(sockfd, &height, sizeof(int), 0);
+    send(sockfd, &x, sizeof(int), 0);
+    send(sockfd, &y, sizeof(int), 0);
+
+    // --- PARTE RIMOSSA: Non inviamo più la matrice visited ---
+
+    // 2. Invio dati MAPPA riga per riga (applicando la nebbia '?')
+    for (int i = 0; i < height; i++) {
         char buffer[width];
-        for(int j=0; j<width; j++) {
-            if(visited[i][j] == 1 || (abs(i - x) <= 1 && abs(j - y) <= 1)) {
-                buffer[j] = (i==x && j==y) ? 'X' : map[i][j];
+        for (int j = 0; j < width; j++) {
+            // Logica della nebbia: usiamo 'visited' solo internamente al server
+            if (visited[i][j] == 1 || (abs(i - x) <= 1 && abs(j - y) <= 1)) {
+                buffer[j] = (i == x && j == y) ? 'X' : map[i][j];
             } else {
-                buffer[j] = '?';
+                buffer[j] = '?'; 
             }
         }
-        int sent = 0;
-        while(sent < width) {
-            int n = send(sockfd, buffer + sent, width - sent, 0);
-            if(n <= 0) { perror("send row"); return; }
-            sent += n;
+
+        // Invio riga di caratteri
+        size_t row_size_char = (size_t)width * sizeof(char);
+        ssize_t sent = send(sockfd, buffer, row_size_char, 0);
+        if (sent < 0 || (size_t)sent != row_size_char) {
+            perror("Error sending map row");
+            return;
         }
     }
 }
@@ -237,50 +245,35 @@ void sendAdjacentMap(int sockfd, char **map, int width, int height, int x, int y
 }
 char **receiveMap(int sockfd, int *width, int *height, int *x, int *y, int *effectiveRows, int *effectiveCols) {
     char type;
-    // 1. Ricevi il tipo e le coordinate/dimensioni base
-    if(recv(sockfd, &type, sizeof(char), 0) != sizeof(char)) return NULL;
-    if(recv(sockfd, width, sizeof(int), 0) != sizeof(int)) return NULL;
-    if(recv(sockfd, height, sizeof(int), 0) != sizeof(int)) return NULL;
-    if(recv(sockfd, x, sizeof(int), 0) != sizeof(int)) return NULL;
-    if(recv(sockfd, y, sizeof(int), 0) != sizeof(int)) return NULL;
+    if(recv(sockfd, &type, sizeof(char), 0) <= 0) return NULL;
+    if(recv(sockfd, width, sizeof(int), 0) <= 0) return NULL;
+    if(recv(sockfd, height, sizeof(int), 0) <= 0) return NULL;
+    if(recv(sockfd, x, sizeof(int), 0) <= 0) return NULL;
+    if(recv(sockfd, y, sizeof(int), 0) <= 0) return NULL;
 
-    if (type == 'A') {
-        // Per il tipo A, il server invia le dimensioni della sotto-matrice (es. 3x3)
-        if(recv(sockfd, effectiveRows, sizeof(int), 0) != sizeof(int)) return NULL;
-        if(recv(sockfd, effectiveCols, sizeof(int), 0) != sizeof(int)) return NULL;
-    } else {
-        // Per il tipo B, riceviamo l'intera mappa
+    if (type == 'B') {
+        // Tipo B: Mappa intera (sfocata dal server)
         *effectiveRows = *height;
         *effectiveCols = *width;
+        // --- PARTE RIMOSSA: Non leggiamo più dati extra ---
+    } 
+    else if (type == 'A') {
+        // Tipo A: Sotto-matrice adiacente
+        if(recv(sockfd, effectiveRows, sizeof(int), 0) <= 0) return NULL;
+        if(recv(sockfd, effectiveCols, sizeof(int), 0) <= 0) return NULL;
     }
 
-    // 2. Alloca la matrice da ritornare
+    // Allocazione e ricezione dei caratteri
     char **new_map = malloc(*effectiveRows * sizeof(char *));
-    if(!new_map) return NULL;
-
     for (int i = 0; i < *effectiveRows; i++) {
         new_map[i] = malloc(*effectiveCols * sizeof(char));
-        if(!new_map[i]) {
-            // Gestione errore allocazione: libera tutto il precedente
-            for(int j=0; j<i; j++) free(new_map[j]);
-            free(new_map);
-            return NULL;
-        }
-
-        // 3. Ricevi i dati della riga
         int recvd = 0;
         while (recvd < *effectiveCols) {
             int n = recv(sockfd, new_map[i] + recvd, *effectiveCols - recvd, 0);
-            if (n <= 0) {
-                perror("recv row data");
-                for(int j=0; j<i; j++) free(new_map[j]);
-                free(new_map);
-                return NULL; 
-            }
+            if (n <= 0) return NULL; 
             recvd += n;
         }
     }
-
     return new_map;
 }
 /*
@@ -302,14 +295,19 @@ void sendMap(int sockfd, char **map, int width, int height, int x, int y) {
     }
 } */
 
-void adjVisit(int width, int height, int x, int y, int visited[height][width]) {
-    if(x > 0) visited[x-1][y] = 1;
-    if(x < height-1) visited[x+1][y] = 1;
-    if(y > 0) visited[x][y-1] = 1;
-    if(y < width-1) visited[x][y+1] = 1;
-    // adiacenti diagonali
-    if(x > 0 && y > 0) visited[x-1][y-1] = 1;
-    if(x > 0 && y < width-1) visited[x-1][y+1] = 1;
-    if(x < height-1 && y > 0) visited[x+1][y-1] = 1;
-    if(x < height-1 && y < width-1) visited[x+1][y+1] = 1;
+void adjVisit(int width, int height, int x, int y, int **visited) {
+    if (!visited) return;
+
+    // Segna la posizione attuale come visitata
+    visited[x][y] = 1;
+
+    // Ciclo per le 8 celle adiacenti + quella centrale
+    for (int i = x - 1; i <= x + 1; i++) {
+        for (int j = y - 1; j <= y + 1; j++) {
+            // Controllo dei bordi della mappa
+            if (i >= 0 && i < height && j >= 0 && j < width) {
+                visited[i][j] = 1;
+            }
+        }
+    }
 }

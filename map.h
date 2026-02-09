@@ -17,9 +17,9 @@ void freeMap(char **map, int width);
 
 // Stampa la mappa su stdout (per debug)
 
-void sendBlurredMap(int sockfd, char **map, int width, int height, int x, int y, int visited[height][width]);
+void sendBlurredMap(int sockfd, char **map, int width, int height, int x, int y, int** visited);
 void sendAdjacentMap(int sockfd, char **map, int width, int height, int x, int y);
-void adjVisit(int width, int height, int x, int y, int visited[height][width]);
+void adjVisit(int width, int height, int x, int y, int **visited);
 
 void printMap(char **map, int width, int height, int x, int y);
 #endif
