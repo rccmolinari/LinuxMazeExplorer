@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/socket.h>
+#include <string.h>
 
 int dx[4] = {-2, 2, 0, 0}; // su, giù, sinistra, destra
 int dy[4] = {0, 0, -2, 2};
@@ -123,14 +124,18 @@ void freeMap(char **map, int height) {
 }
 
 // stampa la mappa
-void printMap(char **map, int width, int height) {
+void printMap(char **map, int width, int height, int x, int y) {
     if(!map) return;
     for(int i=0;i<height;i++) {
         for(int j=0;j<width;j++)
+            if(i==x && j==y)
+                putchar('X'); // posizione attuale
+            else
             putchar(map[i][j]);
         putchar('\n');
     }
 }
+/*
 
 void printMapBlurred(char **map, int width, int height, int x, int y, int visited[height][width]) {
     if(!map) return;
@@ -148,7 +153,8 @@ void printMapBlurred(char **map, int width, int height, int x, int y, int visite
         putchar('\n');
     }
 }
-
+*/
+/*
 void printMapAdjacent(char **map, int width, int height, int x, int y) {
     if(!map) return;
     for(int i=x-1;i<=x+1;i++) {
@@ -163,26 +169,121 @@ void printMapAdjacent(char **map, int width, int height, int x, int y) {
         putchar('\n');
     }
 }
+*/
 
-char **receiveMap(int sockfd, int *width, int *height, int *x, int *y) {
-    // ricevi dimensioni
-    if(recv(sockfd, width, sizeof(int), 0) != sizeof(int)) perror("recv width");
-    if(recv(sockfd, height, sizeof(int), 0) != sizeof(int)) perror("recv height");
-    if(recv(sockfd, x, sizeof(int), 0) != sizeof(int)) perror("recv x");
-    if(recv(sockfd, y, sizeof(int), 0) != sizeof(int)) perror("recv y");
-    // alloca matrice
-    char **map = malloc(*height * sizeof(char*));
-    for(int i=0; i<*height; i++) {
-        map[i] = malloc(*width * sizeof(char));
+void sendBlurredMap(int sockfd, char **map, int width, int height, int x, int y, int visited[height][width]) {
+    // 1. invio dimensioni
+    if(send(sockfd, "B", sizeof(char), 0) != sizeof(char)) perror("send type");
+    if(send(sockfd, &width, sizeof(int), 0) != sizeof(int)) perror("send width");
+    if(send(sockfd, &height, sizeof(int), 0) != sizeof(int)) perror("send height");
+    if(send(sockfd, &x, sizeof(int), 0) != sizeof(int)) perror("send x");
+    if(send(sockfd, &y, sizeof(int), 0) != sizeof(int)) perror("send y");
+
+    // 2. invio dati riga per riga
+    for(int i=0; i<height; i++) {
+        char buffer[width];
+        for(int j=0; j<width; j++) {
+            if(visited[i][j] == 1 || (abs(i - x) <= 1 && abs(j - y) <= 1)) {
+                buffer[j] = (i==x && j==y) ? 'X' : map[i][j];
+            } else {
+                buffer[j] = '?';
+            }
+        }
+        int sent = 0;
+        while(sent < width) {
+            int n = send(sockfd, buffer + sent, width - sent, 0);
+            if(n <= 0) { perror("send row"); return; }
+            sent += n;
+        }
+    }
+}
+void sendAdjacentMap(int sockfd, char **map, int width, int height, int x, int y) {
+    // 1. Invio intestazione standard
+    send(sockfd, "A", 1, 0);
+    send(sockfd, &width, sizeof(int), 0);
+    send(sockfd, &height, sizeof(int), 0);
+    send(sockfd, &x, sizeof(int), 0);
+    send(sockfd, &y, sizeof(int), 0);
+
+    // 2. Calcolo corretto dei limiti (clamping sui bordi)
+    int r_start = (x - 1 < 0) ? 0 : x - 1;
+    int r_end   = (x + 1 >= height) ? height - 1 : x + 1;
+    int c_start = (y - 1 < 0) ? 0 : y - 1;
+    int c_end   = (y + 1 >= width) ? width - 1 : y + 1;
+
+    int nrows = r_end - r_start + 1;
+    int ncols = c_end - c_start + 1;
+
+    // 3. Invio dimensioni della sotto-matrice
+    send(sockfd, &nrows, sizeof(int), 0);
+    send(sockfd, &ncols, sizeof(int), 0);
+
+    // 4. Invio dati riga per riga
+    for(int i = r_start; i <= r_end; i++) {
+        char buffer[ncols];
+        for(int j = c_start; j <= c_end; j++) {
+            // Se è la posizione del giocatore metti X, altrimenti il dato della mappa
+            buffer[j - c_start] = (i == x && j == y) ? 'X' : map[i][j];
+        }
+        
+        // Invio sicuro della riga
+        int sent = 0;
+        while(sent < ncols) {
+            int n = send(sockfd, buffer + sent, ncols - sent, 0);
+            if(n <= 0) return;
+            sent += n;
+        }
+    }
+}
+char **receiveMap(int sockfd, int *width, int *height, int *x, int *y, int *effectiveRows, int *effectiveCols) {
+    char type;
+    // 1. Ricevi il tipo e le coordinate/dimensioni base
+    if(recv(sockfd, &type, sizeof(char), 0) != sizeof(char)) return NULL;
+    if(recv(sockfd, width, sizeof(int), 0) != sizeof(int)) return NULL;
+    if(recv(sockfd, height, sizeof(int), 0) != sizeof(int)) return NULL;
+    if(recv(sockfd, x, sizeof(int), 0) != sizeof(int)) return NULL;
+    if(recv(sockfd, y, sizeof(int), 0) != sizeof(int)) return NULL;
+
+    if (type == 'A') {
+        // Per il tipo A, il server invia le dimensioni della sotto-matrice (es. 3x3)
+        if(recv(sockfd, effectiveRows, sizeof(int), 0) != sizeof(int)) return NULL;
+        if(recv(sockfd, effectiveCols, sizeof(int), 0) != sizeof(int)) return NULL;
+    } else {
+        // Per il tipo B, riceviamo l'intera mappa
+        *effectiveRows = *height;
+        *effectiveCols = *width;
+    }
+
+    // 2. Alloca la matrice da ritornare
+    char **new_map = malloc(*effectiveRows * sizeof(char *));
+    if(!new_map) return NULL;
+
+    for (int i = 0; i < *effectiveRows; i++) {
+        new_map[i] = malloc(*effectiveCols * sizeof(char));
+        if(!new_map[i]) {
+            // Gestione errore allocazione: libera tutto il precedente
+            for(int j=0; j<i; j++) free(new_map[j]);
+            free(new_map);
+            return NULL;
+        }
+
+        // 3. Ricevi i dati della riga
         int recvd = 0;
-        while(recvd < *width) {
-            int n = recv(sockfd, map[i] + recvd, *width - recvd, 0);
-            if(n <= 0) { perror("recv row"); return NULL; }
+        while (recvd < *effectiveCols) {
+            int n = recv(sockfd, new_map[i] + recvd, *effectiveCols - recvd, 0);
+            if (n <= 0) {
+                perror("recv row data");
+                for(int j=0; j<i; j++) free(new_map[j]);
+                free(new_map);
+                return NULL; 
+            }
             recvd += n;
         }
     }
-    return map;
+
+    return new_map;
 }
+/*
 void sendMap(int sockfd, char **map, int width, int height, int x, int y) {
     // 1. invio dimensioni
     if(send(sockfd, &width, sizeof(int), 0) != sizeof(int)) perror("send width");
@@ -199,7 +300,7 @@ void sendMap(int sockfd, char **map, int width, int height, int x, int y) {
             sent += n;
         }
     }
-}
+} */
 
 void adjVisit(int width, int height, int x, int y, int visited[height][width]) {
     if(x > 0) visited[x-1][y] = 1;

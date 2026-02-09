@@ -68,7 +68,7 @@ void gaming(int user, char * username, int log, char ** map, int width, int heig
         startingY = rand() % width;
     } while(map[startingX][startingY] != PATH);
 
-    sendMap(user, map, width, height, startingX, startingY);
+    sendAdjacentMap(user, map, width, height, startingX, startingY);
     char buffer[256];
     
     while(1) {
@@ -151,7 +151,7 @@ void gaming(int user, char * username, int log, char ** map, int width, int heig
         pthread_cond_signal(&cond);
         pthread_mutex_unlock(&mutex);
         
-        sendMap(user, map, width, height, startingX, startingY);
+        sendAdjacentMap(user, map, width, height, startingX, startingY);
     }
 }
 
@@ -216,7 +216,7 @@ int main() {
     int width, height;
     char **map = generateMap(&width, &height);
     printf("Mappa generata %dx%d:\n", width, height);
-    printMap(map, width, height);
+    printMap(map, width, height, 0, 0);
 
     while(1) {
         struct sockaddr_in cli;

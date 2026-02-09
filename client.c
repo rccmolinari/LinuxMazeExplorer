@@ -44,7 +44,8 @@ int main(int argc, char* argv[]) {
     send(sockfd, username, readedbyte, 0);
     
     int width, height, x, y;
-    char ** map = receiveMap(sockfd, &width, &height, &x, &y);
+    int effectiveCols, effectiveRows;
+    char ** map = receiveMap(sockfd, &width, &height, &x, &y, &effectiveRows, &effectiveCols);
     
     int visited[height][width];
     for(int i=0; i<height; i++)
@@ -53,7 +54,7 @@ int main(int argc, char* argv[]) {
     visited[x][y] = 1;
     
     printf("Gioco iniziato!\n");
-    printMapAdjacent(map, width, height, x, y);
+    printMap(map, effectiveCols, effectiveRows, x, y);
     
     while (1) {
         char command[256];
@@ -83,7 +84,7 @@ int main(int argc, char* argv[]) {
         }
         
         // Altrimenti ricevi la mappa normalmente
-        map = receiveMap(sockfd, &width, &height, &x, &y);
+        map = receiveMap(sockfd, &width, &height, &x, &y, &effectiveRows, &effectiveCols);
         if(map == NULL) {
             printf("Connessione chiusa dal server\n");
             break;
@@ -92,10 +93,10 @@ int main(int argc, char* argv[]) {
         visited[x][y] = 1;
         system("clear");
         adjVisit(width, height, x, y, visited);
-        printMapBlurred(map, width, height, x, y, visited);
+        printMap(map, effectiveCols, effectiveRows, x, y);
     }
     
-    freeMap(map, height);
+    freeMap(map, effectiveCols);
     close(sockfd);
     return 0;
 }
