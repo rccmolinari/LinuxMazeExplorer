@@ -15,8 +15,12 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t scoreMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t scoreCond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t lobbyMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t lobbyCond = PTHREAD_COND_INITIALIZER;
 int mapChanging = 0;
 int scoreChanging = 0;
+int nReady = 0;
+int nClients = 0;
 struct data {
 	int user;
 	int log;
@@ -24,6 +28,7 @@ struct data {
 	int width;
 	int height;
 };
+
 
 void writeScore(const char * username, int score) {
     pthread_mutex_lock(&scoreMutex);
@@ -162,6 +167,18 @@ void *newUser(void* data) {
     char username[256];
     free(data);
     authenticate(client, log, username);
+    pthread_mutex_lock(&lobbyMutex);
+    nReady++;
+    printf("Utenti pronti: %d/%d\n", nReady, nClients);
+    if(nReady == nClients) {
+        printf("Tutti i giocatori sono pronti, inizio partita!\n");
+        pthread_cond_broadcast(&lobbyCond);
+    }
+    else {
+        printf("In attesa che tutti i giocatori siano pronti...\n");
+        pthread_cond_wait(&lobbyCond, &lobbyMutex);
+    }  
+    pthread_mutex_unlock(&lobbyMutex);
 	gaming(client, username, log, map, width, height);
     close(client); // chiude il socket quando finisce il thread
     close(log);
@@ -226,7 +243,7 @@ int main() {
             close(client);
             continue;
         }
-		
+        nClients++;
 
         pthread_detach(tid);
         printf("Nuovo client connesso!\n");
