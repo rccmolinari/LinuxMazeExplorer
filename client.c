@@ -43,7 +43,11 @@ void *silentWaitBlurredMap(void *arg) {
         }
         // MSG_DONTWAIT impedisce al thread di bloccarsi qui se non c'è nulla
         int n = recv(args->sockfd, &type, sizeof(char), MSG_PEEK | MSG_DONTWAIT);
-        
+        if(n > 0 && type == 'E') {
+            printf("\n⏰ Tempo scaduto! ⏰\n");
+            pthread_mutex_unlock(&socketMutex);
+            exit(0);
+        }
         if (n > 0 && type == 'B') {
             // Se è tipo 'B', consumiamo il messaggio e stampiamo
             char **blurredMap = receiveMap(args->sockfd, args->width, args->height, args->x, args->y, &effRows, &effCols);

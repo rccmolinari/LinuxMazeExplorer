@@ -12,20 +12,22 @@
 #include "map.h"
 
 #define SECONDS_TO_BLUR 10
+#define TIMER 5
 
-// Mutex per la protezione delle risorse condivise
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t scoreMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t scoreCond = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t lobbyMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t lobbyCond = PTHREAD_COND_INITIALIZER;
+pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
 
-int mapChanging = 0;
-int scoreChanging = 0;
 int nReady = 0;
 int nClients = 0;
-int gameStarted = 0; // Flag per segnalare l'inizio effettivo
+int gameStarted = 0;
+int timeUp = 0;
+
+int wakeup_pipe[2];          // <<< NUOVO: pipe per svegliare il thread principale
+pthread_t timerTid;
 
 struct data {
     int user;
@@ -33,30 +35,26 @@ struct data {
     char **map;
     int width;
     int height;
-    int x;          // Coordinata X attuale
-    int y;          // Coordinata Y attuale
-    int **visited;  // Matrice delle celle visitate
-    pthread_mutex_t socketWriteMutex; // Protegge il socket dai conflitti tra thread gaming e asyncBlur
+    int x;
+    int y;
+    int **visited;
+    pthread_mutex_t socketWriteMutex;
 };
 
-// Funzione eseguita dal thread asincrono per ogni client
+// THREAD ASINCRONO PER LA MAPPA SFUOCATA
 void *asyncSendBlurredMap(void *arg) {
     struct data *d = (struct data *)arg;
 
-    // Attesa sincronizzata: il thread asincrono parte solo quando la lobby è piena
     pthread_mutex_lock(&lobbyMutex);
-    while (!gameStarted) {
+    while (!gameStarted)
         pthread_cond_wait(&lobbyCond, &lobbyMutex);
-    }
     pthread_mutex_unlock(&lobbyMutex);
 
     while (1) {
         sleep(SECONDS_TO_BLUR);
-        if(d->user <= 0) break; // Se il socket è chiuso, termina il thread
-        // Usiamo un mutex specifico per il socket dell'utente per non mischiare
-        // i byte della mappa adiacente con quelli della mappa sfocata
+        if (d->user <= 0) break;
+
         pthread_mutex_lock(&(d->socketWriteMutex));
-        // Passiamo i dati correnti (x, y e visited vengono aggiornati dal thread gaming)
         sendBlurredMap(d->user, d->map, d->width, d->height, d->x, d->y, d->visited);
         pthread_mutex_unlock(&(d->socketWriteMutex));
     }
@@ -65,11 +63,6 @@ void *asyncSendBlurredMap(void *arg) {
 
 void writeScore(const char *username, int score) {
     pthread_mutex_lock(&scoreMutex);
-    while (scoreChanging) {
-        pthread_cond_wait(&scoreCond, &scoreMutex);
-    }
-    scoreChanging = 1;
-    
     int scoreFile = open("score.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (scoreFile >= 0) {
         char buffer[512];
@@ -77,33 +70,40 @@ void writeScore(const char *username, int score) {
         write(scoreFile, buffer, len);
         close(scoreFile);
     }
-    
-    scoreChanging = 0;
-    pthread_cond_signal(&scoreCond);
     pthread_mutex_unlock(&scoreMutex);
+}
+
+void timer() {
+    sleep(TIMER);
+    pthread_mutex_lock(&timerMutex);
+    timeUp = 1;
+    pthread_mutex_unlock(&timerMutex);
+}
+
+int isTimeUp() {
+    pthread_mutex_lock(&timerMutex);
+    int r = timeUp;
+    pthread_mutex_unlock(&timerMutex);
+    return r;
 }
 
 void authenticate(struct data *d, char *usernamesrc) {
     char username[256];
-    char registration[] = "NEW USER: ";
-    int readedbyte = recv(d->user, username, sizeof(username) - 1, 0);
-    if (readedbyte <= 0) {
-        return;
-    }
+    int readedbyte = recv(d->user, username, sizeof(username)-1, 0);
+    if (readedbyte <= 0) return;
     username[readedbyte] = '\0';
-    // Rimuove eventuale newline
     username[strcspn(username, "\r\n")] = 0;
+    strcpy(usernamesrc, username);
 
+    char registration[] = "NEW USER: ";
     write(d->log, registration, strlen(registration));
     write(d->log, username, strlen(username));
     write(d->log, "\n", 1);
-    strcpy(usernamesrc, username);
 }
 
 void gaming(struct data *d, char *username) {
-    int collectedItems = 0;
+    int collected = 0;
 
-    // Posizionamento iniziale
     do {
         d->x = rand() % d->height;
         d->y = rand() % d->width;
@@ -112,43 +112,36 @@ void gaming(struct data *d, char *username) {
     d->visited[d->x][d->y] = 1;
     adjVisit(d->width, d->height, d->x, d->y, d->visited);
 
-    // Primo invio della mappa adiacente
     pthread_mutex_lock(&(d->socketWriteMutex));
     sendAdjacentMap(d->user, d->map, d->width, d->height, d->x, d->y);
     pthread_mutex_unlock(&(d->socketWriteMutex));
 
     char buffer[256];
-    while (1) {
-        int readedbyte = recv(d->user, buffer, sizeof(buffer) - 1, 0);
-        if (readedbyte <= 0) break;
-        buffer[readedbyte] = '\0';
+    while (!isTimeUp()) {
+        int r = recv(d->user, buffer, sizeof(buffer)-1, 0);
+        if (r <= 0) break;
+        buffer[r] = '\0';
         buffer[strcspn(buffer, "\r\n")] = 0;
 
-        if (strcmp(buffer, "exit") == 0) break;
-
-        write(d->log, "COMMAND: ", 9);
-        write(d->log, buffer, strlen(buffer));
-        write(d->log, "\n", 1);
+        if (!strcmp(buffer, "exit")) break;
 
         int nextX = d->x;
         int nextY = d->y;
         int win = 0;
 
-        // Logica di movimento e controllo bordi per vittoria
-        if (strcmp(buffer, "W") == 0) { if (d->x == 0) win = 1; else nextX--; }
-        else if (strcmp(buffer, "S") == 0) { if (d->x == d->height - 1) win = 1; else nextX++; }
-        else if (strcmp(buffer, "A") == 0) { if (d->y == 0) win = 1; else nextY--; }
-        else if (strcmp(buffer, "D") == 0) { if (d->y == d->width - 1) win = 1; else nextY++; }
+        if (!strcmp(buffer, "W")) { if (d->x==0) win=1; else nextX--; }
+        if (!strcmp(buffer, "S")) { if (d->x==d->height-1) win=1; else nextX++; }
+        if (!strcmp(buffer, "A")) { if (d->y==0) win=1; else nextY--; }
+        if (!strcmp(buffer, "D")) { if (d->y==d->width-1) win=1; else nextY++; }
 
         if (win) {
             pthread_mutex_lock(&(d->socketWriteMutex));
             send(d->user, "WIN", 3, 0);
             pthread_mutex_unlock(&(d->socketWriteMutex));
-            writeScore(username, collectedItems);
+            writeScore(username, collected);
             break;
         }
 
-        // Se il movimento è verso un percorso o un oggetto, aggiorna
         pthread_mutex_lock(&mutex);
         if (d->map[nextX][nextY] != WALL) {
             d->x = nextX;
@@ -158,60 +151,63 @@ void gaming(struct data *d, char *username) {
 
             if (d->map[d->x][d->y] == ITEM) {
                 d->map[d->x][d->y] = PATH;
-                collectedItems++;
+                collected++;
             }
         }
         pthread_mutex_unlock(&mutex);
 
-        // Invio mappa aggiornata
         pthread_mutex_lock(&(d->socketWriteMutex));
         sendAdjacentMap(d->user, d->map, d->width, d->height, d->x, d->y);
         pthread_mutex_unlock(&(d->socketWriteMutex));
     }
 }
 
-void *newUser(void* arg) {
+void *newUser(void *arg) {
     struct data *d = (struct data*)arg;
     char username[256];
 
     authenticate(d, username);
 
-    // Gestione Lobby
     pthread_mutex_lock(&lobbyMutex);
     nReady++;
-    printf("Utenti pronti: %d/%d\n", nReady, nClients);
     if (nReady == nClients) {
         gameStarted = 1;
+        pthread_create(&timerTid, NULL, (void*)timer, NULL);
         pthread_cond_broadcast(&lobbyCond);
     } else {
-        while (!gameStarted) {
+        while (!gameStarted)
             pthread_cond_wait(&lobbyCond, &lobbyMutex);
-        }
     }
     pthread_mutex_unlock(&lobbyMutex);
 
-    // Avvio del thread per la nebbia asincrona
     pthread_t blurTid;
     pthread_create(&blurTid, NULL, asyncSendBlurredMap, d);
     pthread_detach(blurTid);
 
     gaming(d, username);
 
-    // Pulizia risorse per il client specifico
+    send(d->user, "E", 1, 0);
     close(d->user);
     close(d->log);
-    for (int i = 0; i < d->height; i++) free(d->visited[i]);
+
+    for (int i=0;i<d->height;i++) free(d->visited[i]);
     free(d->visited);
     pthread_mutex_destroy(&(d->socketWriteMutex));
     free(d);
+    nClients--;
+    if(nClients == 0) {
+        write(wakeup_pipe[1], "X", 1);
+        close(wakeup_pipe[1]);
+    }
     
+
     return NULL;
 }
 
 int main() {
     srand(time(NULL));
-    int filelog_init = open("filelog.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
-    close(filelog_init);
+
+    pipe(wakeup_pipe); // <<< CREA PIPE PER SVEGLIARE SELECT
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in srv = {0};
@@ -219,45 +215,62 @@ int main() {
     srv.sin_port = htons(8080);
     srv.sin_addr.s_addr = INADDR_ANY;
 
-    if (bind(sockfd, (struct sockaddr*)&srv, sizeof(srv)) < 0) {
-        perror("bind"); exit(1);
-    }
+    bind(sockfd, (struct sockaddr*)&srv, sizeof(srv));
     listen(sockfd, 100);
 
-    int w, h;
-    char **map = generateMap(&w, &h);
-    printf("***SERVER ATTIVO***\nMappa %dx%d generata.\n", w, h);
-    printMap(map, w, h, -1, -1); // Stampa la mappa completa per debug
-    while (1) {
-        struct sockaddr_in cli;
-        socklen_t len = sizeof(cli);
-        int client_fd = accept(sockfd, (struct sockaddr*)&cli, &len);
-        
-        struct data *pdata = malloc(sizeof(struct data));
-        pdata->user = client_fd;
-        pdata->log = open("filelog.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
-        pdata->map = map;
-        pdata->width = w;
-        pdata->height = h;
-        pdata->x = 0;
-        pdata->y = 0;
-        pthread_mutex_init(&(pdata->socketWriteMutex), NULL);
+    int w,h;
+    char **map = generateMap(&w,&h);
+    printf("*** SERVER AVVIATO ***\n");
 
-        // Inizializzazione matrice visited
-        pdata->visited = malloc(h * sizeof(int*));
-        for (int i = 0; i < h; i++) {
-            pdata->visited[i] = calloc(w, sizeof(int));
+    while (1) {
+
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(sockfd, &rfds);
+        FD_SET(wakeup_pipe[0], &rfds);
+
+        int maxfd = (sockfd > wakeup_pipe[0]) ? sockfd : wakeup_pipe[0];
+
+        select(maxfd+1, &rfds, NULL, NULL, NULL);
+
+        if (FD_ISSET(wakeup_pipe[0], &rfds)) {
+            char c;
+            read(wakeup_pipe[0], &c, 1);
+            printf("Chiusura server dal thread figlio.\n");
+            close(wakeup_pipe[0]);
+            break;
         }
 
-        pthread_mutex_lock(&lobbyMutex);
-        nClients++;
-        pthread_mutex_unlock(&lobbyMutex);
+        if (FD_ISSET(sockfd, &rfds)) {
+            struct sockaddr_in cli;
+            socklen_t clen = sizeof(cli);
+            int cfd = accept(sockfd, (struct sockaddr*)&cli, &clen);
 
-        pthread_t tid;
-        pthread_create(&tid, NULL, newUser, pdata);
-        pthread_detach(tid);
-        printf("Nuovo client connesso. Totale: %d\n", nClients);
+            struct data *d = malloc(sizeof(struct data));
+            d->user = cfd;
+            d->log = open("filelog.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
+            d->map = map;
+            d->width = w;
+            d->height = h;
+
+            pthread_mutex_init(&(d->socketWriteMutex), NULL);
+
+            d->visited = malloc(h*sizeof(int*));
+            for (int i=0;i<h;i++)
+                d->visited[i] = calloc(w,sizeof(int));
+
+            pthread_mutex_lock(&lobbyMutex);
+            nClients++;
+            pthread_mutex_unlock(&lobbyMutex);
+
+            pthread_t tid;
+            pthread_create(&tid, NULL, newUser, d);
+            pthread_detach(tid);
+
+            printf("Nuovo client connesso: %d totali\n", nClients);
+        }
     }
 
+    close(sockfd);
     return 0;
 }
