@@ -1,7 +1,2 @@
-NEW USER: asddsdsf
-COMMAND: S
-COMMAND: S
-COMMAND: D
-COMMAND: D
-NEW USER: asdasdds
-NEW USER: asdijdasji
+[2026-02-18 18:56:13] SERVER: avvio in corso
+[2026-02-18 18:56:13] SERVER: in ascolto sulla porta 8080
