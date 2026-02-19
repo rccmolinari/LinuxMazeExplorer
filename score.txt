@@ -1,1 +1,2 @@
-mimmo 0 0
+nte 0 1
+faue 0 1

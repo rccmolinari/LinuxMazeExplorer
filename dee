@@ -1,0 +1,65 @@
+[33mcommit 570973600fbcf39f419434d6d5c3a9db172f8de6[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: resox <rocco0560@gmail.com>
+Date:   Thu Feb 19 17:15:23 2026 +0100
+
+    ADDED COMMENTS FIX SOME BUGS, ADDED WIN/LOSE MESSAGE, ADDED EXIT COMMAND
+
+[33mcommit 38ca7cba78c58330e3b85e65a7918f2793d12122[m
+Author: resox <rocco0560@gmail.com>
+Date:   Wed Feb 18 19:30:23 2026 +0100
+
+    ENDING FUNCTIONALLITY COMMIT
+
+[33mcommit eb2cc0313cec4bc3931244cd55a041a31f517709[m
+Author: resox <rocco0560@gmail.com>
+Date:   Wed Feb 18 11:48:18 2026 +0100
+
+    TIMER AND WAKE UP PIPE IMPLEMENTATION COMMIT
+
+[33mcommit 4e29d272a120394a8776592a0cf0015c4254e7dc[m
+Author: resox <rocco0560@gmail.com>
+Date:   Mon Feb 9 19:22:14 2026 +0100
+
+    MUTEX COMMITE
+
+[33mcommit a2d654bc70793ea56de9382d8481c8a523948740[m
+Author: resox <rocco0560@gmail.com>
+Date:   Mon Feb 9 17:56:07 2026 +0100
+
+    ADJUSTED ADJACENT MAP FOR USER
+
+[33mcommit adc1d049cfcda36841bc90912d9f612687798b54[m
+Author: resox <rocco0560@gmail.com>
+Date:   Mon Feb 9 16:15:28 2026 +0100
+
+    CREATING A LOBBY
+
+[33mcommit 6ec760d33e1c1f829867778ef3ab2835f8f5b39c[m
+Author: resox <rocco0560@gmail.com>
+Date:   Fri Feb 6 18:38:01 2026 +0100
+
+    minimal change
+
+[33mcommit 1609b80f3bc147ccfaacb12b961a826124fead79[m
+Author: resox <rocco0560@gmail.com>
+Date:   Fri Feb 6 16:01:13 2026 +0100
+
+    minor updates
+
+[33mcommit f8731e5df20a0a457dfe50637389fa6f25b578aa[m
+Author: resox <rocco0560@gmail.com>
+Date:   Fri Feb 6 15:33:50 2026 +0100
+
+    client multithreading commit
+
+[33mcommit 96d788fba1cd69ce4fcac2cd0df42571dc2d727a[m
+Author: resox <rocco0560@gmail.com>
+Date:   Fri Feb 6 13:12:42 2026 +0100
+
+    Aggiungo file
+
+[33mcommit fa7fd2487a53858906c9d1d26b4b094dfe7e46ab[m
+Author: resox <rocco0560@gmail.com>
+Date:   Fri Feb 6 13:10:52 2026 +0100
+
+    first commit

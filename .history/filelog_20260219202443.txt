@@ -1,0 +1,63 @@
+[2026-02-19 20:24:08] SERVER: avvio in corso
+[2026-02-19 20:24:08] SERVER: in ascolto sulla porta 8080
+[2026-02-19 20:24:08] SERVER: nuova partita pronta, in attesa di giocatori
+[2026-02-19 20:24:12] SERVER: connessione da 127.0.0.1 (client #1)
+[2026-02-19 20:24:18] SERVER: connessione da 127.0.0.1 (client #2)
+[2026-02-19 20:24:19] [NTEE@127.0.0.1] AUTH: utente connesso
+[2026-02-19 20:24:19] [NTEE@127.0.0.1] LOBBY: in attesa (1/2)
+[2026-02-19 20:24:21] [FAUEE@127.0.0.1] AUTH: utente connesso
+[2026-02-19 20:24:21] [FAUEE@127.0.0.1] LOBBY: in attesa (2/2)
+[2026-02-19 20:24:21] LOBBY: tutti pronti, partita in avvio
+[2026-02-19 20:24:21] [FAUEE@127.0.0.1] LOBBY: partita avviata, inizio gioco
+[2026-02-19 20:24:21] [NTEE@127.0.0.1] LOBBY: partita avviata, inizio gioco
+[2026-02-19 20:24:21] [FAUEE@127.0.0.1] GAME: spawn in (1,0)
+[2026-02-19 20:24:21] [NTEE@127.0.0.1] GAME: spawn in (2,1)
+[2026-02-19 20:24:21] [FAUEE@127.0.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-02-19 20:24:21] [NTEE@127.0.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-02-19 20:24:21] TIMER: countdown avviato
+[2026-02-19 20:24:22] [FAUEE@127.0.0.1] MOVE: 'D' (pos: 1,0)
+[2026-02-19 20:24:22] [FAUEE@127.0.0.1] MOVE: nuova pos (1,1)
+[2026-02-19 20:24:22] [FAUEE@127.0.0.1] MOVE: 'D' (pos: 1,1)
+[2026-02-19 20:24:22] [FAUEE@127.0.0.1] MOVE: nuova pos (1,2)
+[2026-02-19 20:24:23] [FAUEE@127.0.0.1] MOVE: 'D' (pos: 1,2)
+[2026-02-19 20:24:23] [FAUEE@127.0.0.1] GAME: uscita trovata
+[2026-02-19 20:24:23] [FAUEE@127.0.0.1] GAME: sessione terminata
+[2026-02-19 20:24:23] [FAUEE@127.0.0.1] SCORE: oggetti=0 exit=1
+[2026-02-19 20:24:25] [NTEE@127.0.0.1] MOVE: 'S' (pos: 2,1)
+[2026-02-19 20:24:25] [NTEE@127.0.0.1] GAME: uscita trovata
+[2026-02-19 20:24:25] [NTEE@127.0.0.1] GAME: sessione terminata
+[2026-02-19 20:24:25] [NTEE@127.0.0.1] SCORE: oggetti=0 exit=1
+[2026-02-19 20:24:25] [NTEE@127.0.0.1] CLEANUP: connessione chiusa
+[2026-02-19 20:24:25] SERVER: partita terminata, reset in corso
+[2026-02-19 20:24:25] SERVER: nuova partita pronta, in attesa di giocatori
+[2026-02-19 20:24:25] [FAUEE@127.0.0.1] CLEANUP: connessione chiusa
+[2026-02-19 20:24:31] SERVER: connessione da 127.0.0.1 (client #1)
+[2026-02-19 20:24:34] SERVER: connessione da 127.0.0.1 (client #2)
+[2026-02-19 20:24:35] [MIMMO@127.0.0.1] AUTH: utente connesso
+[2026-02-19 20:24:35] [MIMMO@127.0.0.1] LOBBY: in attesa (1/2)
+[2026-02-19 20:24:38] [RIKI@127.0.0.1] AUTH: utente connesso
+[2026-02-19 20:24:38] [RIKI@127.0.0.1] LOBBY: in attesa (2/2)
+[2026-02-19 20:24:38] LOBBY: tutti pronti, partita in avvio
+[2026-02-19 20:24:38] [RIKI@127.0.0.1] LOBBY: partita avviata, inizio gioco
+[2026-02-19 20:24:38] [RIKI@127.0.0.1] GAME: spawn in (1,2)
+[2026-02-19 20:24:38] TIMER: countdown avviato
+[2026-02-19 20:24:38] [MIMMO@127.0.0.1] LOBBY: partita avviata, inizio gioco
+[2026-02-19 20:24:38] [MIMMO@127.0.0.1] GAME: spawn in (0,1)
+[2026-02-19 20:24:38] [MIMMO@127.0.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-02-19 20:24:38] [RIKI@127.0.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-02-19 20:24:39] [RIKI@127.0.0.1] MOVE: 'D' (pos: 1,2)
+[2026-02-19 20:24:39] [RIKI@127.0.0.1] GAME: uscita trovata
+[2026-02-19 20:24:39] [RIKI@127.0.0.1] GAME: sessione terminata
+[2026-02-19 20:24:39] [RIKI@127.0.0.1] SCORE: oggetti=0 exit=1
+[2026-02-19 20:24:39] [RIKI@127.0.0.1] CLEANUP: connessione chiusa
+[2026-02-19 20:24:43] [MIMMO@127.0.0.1] MOVE: 'S' (pos: 0,1)
+[2026-02-19 20:24:43] [MIMMO@127.0.0.1] MOVE: nuova pos (1,1)
+[2026-02-19 20:24:44] [MIMMO@127.0.0.1] MOVE: 'S' (pos: 1,1)
+[2026-02-19 20:24:44] [MIMMO@127.0.0.1] MOVE: nuova pos (2,1)
+[2026-02-19 20:24:44] [MIMMO@127.0.0.1] MOVE: 'S' (pos: 2,1)
+[2026-02-19 20:24:44] [MIMMO@127.0.0.1] GAME: uscita trovata
+[2026-02-19 20:24:44] [MIMMO@127.0.0.1] GAME: sessione terminata
+[2026-02-19 20:24:44] [MIMMO@127.0.0.1] SCORE: oggetti=0 exit=1
+[2026-02-19 20:24:44] [MIMMO@127.0.0.1] CLEANUP: connessione chiusa
+[2026-02-19 20:24:44] SERVER: partita terminata, reset in corso
+[2026-02-19 20:24:44] SERVER: nuova partita pronta, in attesa di giocatori
