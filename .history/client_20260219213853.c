@@ -229,10 +229,10 @@ int main(int argc, char* argv[]) {
         printMap(map, effectiveCols, effectiveRows, x, y);
     }
     
+    freeMap(map, effectiveRows);
     /* attende che il thread completi la notifica del risultato finale */
     while(1) {
         sleep(1);
     }
-    freeMap(map, effectiveRows);
     return 0;
 }

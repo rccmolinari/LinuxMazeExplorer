@@ -104,19 +104,27 @@ void *silentWaitBlurredMap(void *arg) {
             end = 1;
             pthread_mutex_unlock(&endMutex);
         }
-        if(n > 0 && type == 'E') {
-            /* fine sessione: consuma 'E', leggi W o L e stampa il risultato */
-            char wol[2];
-            recv(args->sockfd, &type, sizeof(char), 0);
-            int n = recv(args->sockfd, wol, 1, 0);
+        if (n > 0 && type == 'E') {
+            /* consuma 'E' */
+            recv(args->sockfd, &type, 1, 0);
+        
+            /* legge W o L che arriva subito dopo nello stesso invio */
+            char wol;
+            int r = recv(args->sockfd, &wol, 1, 0);
+        
             system("clear");
-            if(n > 0 && wol[0] == 'W') {
+            if (r > 0 && wol == 'W') {
                 printf("\nVITTORIA!\n");
-            } else {
+            } else if (r > 0 && wol == 'L') {
                 printf("\nSCONFITTA!\n");
             }
-            kill(getpid(), SIGUSR1); 
-            close(args->sockfd);
+        
+            pthread_mutex_lock(&endMutex);
+            end = 1;
+            pthread_mutex_unlock(&endMutex);
+        
+            pthread_mutex_unlock(&socketMutex);
+            kill(getpid(), SIGUSR1);
             break;
         }
         if (n > 0 && type == 'B') {
@@ -229,10 +237,10 @@ int main(int argc, char* argv[]) {
         printMap(map, effectiveCols, effectiveRows, x, y);
     }
     
+    freeMap(map, effectiveRows);
     /* attende che il thread completi la notifica del risultato finale */
     while(1) {
-        sleep(1);
+        sleep(10);
     }
-    freeMap(map, effectiveRows);
     return 0;
 }

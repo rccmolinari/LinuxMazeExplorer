@@ -459,6 +459,9 @@ void *newUser(void *arg) {
     /* notifica generica di fine partita (il client aspetta poi W o L) */
     send(d->user, "E", 1, 0);
 
+  /* notifica generica di fine partita */
+send(d->user, "E", 1, 0);
+
 /* ----- ENDGAME ----- */
 pthread_mutex_lock(&lobbyMutex);
 nReady--;
@@ -509,6 +512,7 @@ if (strcmp(gWinner, username) == 0) {
         free(d->visited[i]);
     free(d->visited);
     pthread_mutex_destroy(&(d->socketWriteMutex));
+    pthread_mutex_destroy(&winnerMutex);
     free(d);
 
     return NULL;

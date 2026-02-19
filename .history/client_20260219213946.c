@@ -106,7 +106,7 @@ void *silentWaitBlurredMap(void *arg) {
         }
         if(n > 0 && type == 'E') {
             /* fine sessione: consuma 'E', leggi W o L e stampa il risultato */
-            char wol[2];
+            char wol[1];
             recv(args->sockfd, &type, sizeof(char), 0);
             int n = recv(args->sockfd, wol, 1, 0);
             system("clear");

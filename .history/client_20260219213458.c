@@ -106,13 +106,13 @@ void *silentWaitBlurredMap(void *arg) {
         }
         if(n > 0 && type == 'E') {
             /* fine sessione: consuma 'E', leggi W o L e stampa il risultato */
-            char wol[2];
+            char wol[1];
             recv(args->sockfd, &type, sizeof(char), 0);
             int n = recv(args->sockfd, wol, 1, 0);
             system("clear");
             if(n > 0 && wol[0] == 'W') {
                 printf("\nVITTORIA!\n");
-            } else {
+            } else if(n > 0 && wol[0] == 'L') {
                 printf("\nSCONFITTA!\n");
             }
             kill(getpid(), SIGUSR1); 
@@ -229,10 +229,10 @@ int main(int argc, char* argv[]) {
         printMap(map, effectiveCols, effectiveRows, x, y);
     }
     
+    freeMap(map, effectiveRows);
     /* attende che il thread completi la notifica del risultato finale */
     while(1) {
         sleep(1);
     }
-    freeMap(map, effectiveRows);
     return 0;
 }

@@ -459,47 +459,64 @@ void *newUser(void *arg) {
     /* notifica generica di fine partita (il client aspetta poi W o L) */
     send(d->user, "E", 1, 0);
 
-/* ----- ENDGAME ----- */
-pthread_mutex_lock(&lobbyMutex);
-nReady--;
+    /* ----- ENDGAME: l'ultimo thread a terminare calcola il vincitore ----- */
+    pthread_mutex_lock(&lobbyMutex);
+    nReady--;
 
-snprintf(logmsg, sizeof(logmsg),
-         "[%s@%s] ENDGAME: partita terminata (%d ancora in gioco)", username, d->ip, nReady);
-log_event(logmsg);
-
-if (nReady == 0) {
-    log_event("ENDGAME: tutti i client hanno finito, calcolo vincitore in corso");
-    printWinnerWithPipe(gWinner);
-
-    snprintf(logmsg, sizeof(logmsg), "ENDGAME: vincitore -> '%s'", gWinner);
+    snprintf(logmsg, sizeof(logmsg),
+             "[%s@%s] ENDGAME: partita terminata (%d ancora in gioco)", username, d->ip, nReady);
     log_event(logmsg);
 
-    pthread_mutex_lock(&gWinnerMutex);
-    gWinnerCalculated = 1;
-    pthread_cond_broadcast(&gWinnerCond); /* sveglia TUTTI i thread in attesa */
-    pthread_mutex_unlock(&gWinnerMutex);
+    /*
+     * mutex e cond locali per sincronizzare il calcolo del vincitore.
+     * L'ultimo thread (nReady==0) calcola il vincitore e segnala agli altri.
+     *
+     * Nota: questa struttura ha un limite concettuale perche' mutex/cond sono
+     * locali allo stack di ogni thread e non condivisi. Funziona nella pratica
+     * solo se l'ultimo thread e' anche l'unico ancora attivo a quel punto.
+     * Per una soluzione piu' robusta, spostare la logica nel main.
+     */
+    int winnerCalculated = 0;
+    pthread_mutex_t winnerMutex;
+    pthread_mutex_init(&winnerMutex, NULL);
+    pthread_cond_t winnerCond = PTHREAD_COND_INITIALIZER;
+    char winner[256] = {0};
 
-    write(wakeup_pipe[1], "X", 1);
-    close(wakeup_pipe[1]);
-}
-pthread_mutex_unlock(&lobbyMutex);
+    if (nReady == 0) {
+        log_event("ENDGAME: tutti i client hanno finito, calcolo vincitore in corso");
+        printWinnerWithPipe(winner);
 
-/* attende che il vincitore sia stato determinato */
-pthread_mutex_lock(&gWinnerMutex);
-while (!gWinnerCalculated)
-    pthread_cond_wait(&gWinnerCond, &gWinnerMutex);
-pthread_mutex_unlock(&gWinnerMutex);
+        snprintf(logmsg, sizeof(logmsg), "ENDGAME: vincitore -> '%s'", winner);
+        log_event(logmsg);
 
-/* notifica W o L */
-if (strcmp(gWinner, username) == 0) {
-    snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", username, d->ip);
-    log_event(logmsg);
-    send(d->user, "W", 1, 0);
-} else {
-    snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", username, d->ip);
-    log_event(logmsg);
-    send(d->user, "L", 1, 0);
-}
+        pthread_mutex_lock(&winnerMutex);
+        winnerCalculated = 1;
+        pthread_cond_signal(&winnerCond);
+        pthread_mutex_unlock(&winnerMutex);
+
+        /* sveglia il main per chiudere il server */
+        write(wakeup_pipe[1], "X", 1);
+        close(wakeup_pipe[1]);
+    }
+    pthread_mutex_unlock(&lobbyMutex);
+
+    /* attende che il vincitore sia stato determinato */
+    pthread_mutex_lock(&winnerMutex);
+    while (winnerCalculated == 0)
+        pthread_cond_wait(&winnerCond, &winnerMutex);
+    pthread_mutex_unlock(&winnerMutex);
+
+    /* notifica W (vinto) o L (perso) al client */
+    if (strcmp(winner, username) == 0) {
+        snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", username, d->ip);
+        log_event(logmsg);
+        send(d->user, "W", 1, 0);
+    } else {
+        snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", username, d->ip);
+        log_event(logmsg);
+        send(d->user, "L", 1, 0);
+    }
+
     /* ----- CLEANUP ----- */
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa", username, d->ip);
     log_event(logmsg);
@@ -509,6 +526,7 @@ if (strcmp(gWinner, username) == 0) {
         free(d->visited[i]);
     free(d->visited);
     pthread_mutex_destroy(&(d->socketWriteMutex));
+    pthread_mutex_destroy(&winnerMutex);
     free(d);
 
     return NULL;
