@@ -14,16 +14,16 @@
 #include "map.h"
 
 /*
- * Ogni quanto (in secondi) viene inviata la mappa "sfocata" ai client.
- * Aumentare questo valore rende il gioco piu' facile (nebbia meno frequente).
+ * Intervallo in secondi tra un invio di nebbia e il successivo.
+ * Valori più alti danno più tempo al giocatore prima che la mappa si oscuri.
  */
-#define SECONDS_TO_BLUR 15
+#define SECONDS_TO_BLUR 10
 
 /*
- * Durata complessiva della partita in secondi.
- * Allo scadere, tutti i client vengono notificati e la sessione termina.
+ * Durata della partita in secondi. Allo scadere il server notifica
+ * tutti i client e la sessione si chiude.
  */
-#define TIMER 60
+#define TIMER 5
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -34,6 +34,7 @@
  * lobbyMutex     -> protegge le variabili di lobby (nReady, gameStarted, ecc.)
  * lobbyCond      -> usata per far attendere i thread finche' la partita non parte
  * timerMutex     -> protegge la variabile timeUp
+ * logMutex       -> garantisce che le righe di log non si mescolino tra thread
  * -------------------------------------------------------------------------- */
 pthread_mutex_t mutex      = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t scoreMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -41,6 +42,7 @@ pthread_cond_t  scoreCond  = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t lobbyMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  lobbyCond  = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t timerMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t logMutex   = PTHREAD_MUTEX_INITIALIZER;
 
 /* --------------------------------------------------------------------------
  * Stato globale del server
@@ -65,10 +67,13 @@ pthread_t timerTid;
 
 /* --------------------------------------------------------------------------
  * Struttura dati per ogni client connesso.
- * Ogni thread newUser riceve un puntatore a questa struttura.
+ * Ogni thread newUser riceve un puntatore a questa struttura e la usa
+ * per tutta la durata della sessione.
  * -------------------------------------------------------------------------- */
 struct data {
     int    user;           /* file descriptor del socket del client           */
+    char   ip[INET_ADDRSTRLEN]; /* indirizzo IP del client in formato stringa */
+    char   username[256];  /* nome utente, popolato dopo l'autenticazione     */
     char **map;            /* puntatore alla mappa condivisa                  */
     int    width;
     int    height;
@@ -83,28 +88,28 @@ struct data {
 /* --------------------------------------------------------------------------
  * log_event
  *
- * Scrive una riga di log su gLogFd nel formato:
- *   [YYYY-MM-DD HH:MM:SS] <msg>
- *
- * Usa esclusivamente write(). Non usa printf, fprintf o simili.
- * Per messaggi brevi (< PIPE_BUF byte) la write e' atomica, quindi
- * non servono lock aggiuntivi per il log.
+ * Scrive una riga su gLogFd nel formato [YYYY-MM-DD HH:MM:SS] <msg>.
+ * Usa solo write() — niente printf o fprintf. Il logMutex garantisce
+ * che i messaggi di thread diversi non si mescolino tra loro.
  * -------------------------------------------------------------------------- */
 static void log_event(const char *msg) {
     time_t now = time(NULL);
     struct tm *t = localtime(&now);
     char ts[32];
     strftime(ts, sizeof(ts), "[%Y-%m-%d %H:%M:%S] ", t);
+    pthread_mutex_lock(&logMutex);
     write(gLogFd, ts, strlen(ts));
     write(gLogFd, msg, strlen(msg));
     write(gLogFd, "\n", 1);
+    pthread_mutex_unlock(&logMutex);
 }
 
 /* --------------------------------------------------------------------------
  * log_error
  *
- * Scrive sul log un messaggio di errore accompagnato dalla stringa errno.
- * Usata al posto di perror() per restare coerenti con il vincolo write-only.
+ * Scrive sul log il messaggio di errore associato all'errno corrente,
+ * preceduto dal contesto indicato. Rimpiazza perror() per restare
+ * coerenti con il vincolo di usare solo write().
  * -------------------------------------------------------------------------- */
 static void log_error(const char *context) {
     char errbuf[256];
@@ -122,15 +127,12 @@ static void log_error(const char *context) {
 /* --------------------------------------------------------------------------
  * printWinnerWithPipe
  *
- * Determina il vincitore leggendo score.txt tramite una pipeline shell
- * (sort | head | awk) eseguita in un processo figlio.
- *
- * Il processo figlio reindirizza il proprio stdout sulla pipe e chiama
- * execlp("sh", ...) per eseguire il comando composito. Il padre legge
- * il risultato e lo copia nel buffer winner.
- *
- * Criteri di ordinamento: prima per exit (colonna 3), poi per oggetti
- * raccolti (colonna 2), entrambi in ordine decrescente.
+ * Calcola il vincitore leggendo score.txt con una pipeline shell
+ * eseguita in un processo figlio (fork + execlp).
+ * Il figlio redireziona stdout sulla pipe e lancia:
+ *   sort -k3,3nr -k2,2nr score.txt | head -n1 | awk '{print $1}'
+ * Il padre legge il risultato e lo copia in winner.
+ * Priorita': prima chi ha trovato l'uscita, poi chi ha piu' oggetti.
  * -------------------------------------------------------------------------- */
 void printWinnerWithPipe(char *winner) {
     int fd[2];
@@ -176,9 +178,9 @@ void printWinnerWithPipe(char *winner) {
 /* --------------------------------------------------------------------------
  * asyncSendBlurredMap  [thread]
  *
- * Thread lanciato per ogni client: aspetta che la partita inizi, poi ogni
- * SECONDS_TO_BLUR secondi invia al client la mappa con la nebbia aggiornata.
- * Si interrompe se il socket del client non e' piu' valido (user <= 0).
+ * Gira per tutta la durata della partita. Ogni SECONDS_TO_BLUR secondi
+ * invia al client la mappa con la nebbia aggiornata attorno alla posizione
+ * corrente del giocatore. Si ferma se il socket non e' piu' valido.
  * -------------------------------------------------------------------------- */
 void *asyncSendBlurredMap(void *arg) {
     struct data *d = (struct data *)arg;
@@ -197,7 +199,9 @@ void *asyncSendBlurredMap(void *arg) {
         sendBlurredMap(d->user, d->map, d->width, d->height, d->x, d->y, d->visited);
         pthread_mutex_unlock(&(d->socketWriteMutex));
 
-        log_event("BLUR: mappa sfocata inviata al client");
+        char blurlog[512];
+        snprintf(blurlog, sizeof(blurlog), "[%s@%s] BLUR: mappa sfocata inviata", d->username, d->ip);
+        log_event(blurlog);
     }
     return NULL;
 }
@@ -208,8 +212,8 @@ void *asyncSendBlurredMap(void *arg) {
  * Aggiunge una riga a score.txt nel formato:
  *   <username> <oggetti_raccolti> <exit_flag>
  *
- * L'accesso e' serializzato tramite scoreMutex + variabile scoreChanging
- * per evitare scritture sovrapposte da thread diversi.
+ * Gli accessi sono serializzati con scoreMutex + scoreChanging per evitare
+ * che due thread scrivano contemporaneamente e corrompano il file.
  * -------------------------------------------------------------------------- */
 void writeScore(char *username, struct data *d) {
     pthread_mutex_lock(&scoreMutex);
@@ -227,8 +231,8 @@ void writeScore(char *username, struct data *d) {
         close(scoreFile);
 
         char logmsg[512];
-        snprintf(logmsg, sizeof(logmsg), "SCORE: %s -> oggetti=%d exit=%d",
-                 username, d->collectedItems, d->exitFlag);
+        snprintf(logmsg, sizeof(logmsg), "[%s@%s] SCORE: oggetti=%d exit=%d",
+                 username, d->ip, d->collectedItems, d->exitFlag);
         log_event(logmsg);
     } else {
         log_error("open score.txt in writeScore");
@@ -242,8 +246,9 @@ void writeScore(char *username, struct data *d) {
 /* --------------------------------------------------------------------------
  * timer  [eseguita come thread]
  *
- * Dorme per TIMER secondi, poi imposta timeUp=1 segnalando la fine partita.
- * Viene lanciata dall'ultimo client che completa la fase di lobby.
+ * Aspetta TIMER secondi poi imposta timeUp=1. Viene lanciata dall'ultimo
+ * giocatore che entra in lobby, in modo che il conto alla rovescia parta
+ * solo quando tutti sono connessi.
  * -------------------------------------------------------------------------- */
 void timer() {
     log_event("TIMER: countdown avviato");
@@ -265,37 +270,40 @@ int isTimeUp() {
 /* --------------------------------------------------------------------------
  * authenticate
  *
- * Riceve il nome utente dal client (primo messaggio dopo la connessione) e
- * lo salva in usernamesrc. Registra l'evento nel log.
+ * Legge il nome utente inviato dal client come primo messaggio dopo la
+ * connessione. Lo salva sia in usernamesrc che in d->username, cosi'
+ * tutte le funzioni successive possono includerlo nei log.
  * -------------------------------------------------------------------------- */
 void authenticate(struct data *d, char *usernamesrc) {
     char username[256];
     int readedbyte = recv(d->user, username, sizeof(username) - 1, 0);
     if (readedbyte <= 0) {
-        log_event("AUTH ERROR: ricezione username fallita o client disconnesso");
+        char logmsg[512];
+        snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: ricezione username fallita, client disconnesso", d->ip);
+        log_event(logmsg);
         return;
     }
 
     username[readedbyte] = '\0';
     username[strcspn(username, "\r\n")] = 0;
     strcpy(usernamesrc, username);
+    strncpy(d->username, username, sizeof(d->username) - 1);
+    d->username[sizeof(d->username) - 1] = '\0';
 
     char logmsg[512];
-    snprintf(logmsg, sizeof(logmsg), "AUTH: nuovo utente registrato -> '%s'", username);
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] AUTH: utente connesso", username, d->ip);
     log_event(logmsg);
 }
 
 /* --------------------------------------------------------------------------
  * gaming
  *
- * Ciclo principale di gioco per un client.
- *
- * 1. Posiziona il giocatore su una cella PATH casuale.
- * 2. Invia la mappa adiacente iniziale.
- * 3. Entra nel loop: legge i comandi (W/A/S/D/exit), aggiorna la posizione,
- *    raccoglie gli item, controlla se il giocatore esce dalla mappa.
- * 4. Termina quando il timer scade, il client invia "exit", oppure raggiunge
- *    il bordo della mappa.
+ * Ciclo di gioco per un client. Assegna una posizione di spawn casuale su
+ * una cella PATH, poi legge i comandi (W/A/S/D/exit) in un loop:
+ * - se il giocatore tocca il bordo della mappa, ha trovato l'uscita
+ * - se cammina su un ITEM, lo raccoglie e incrementa il contatore
+ * - se il muro blocca il movimento, la posizione non cambia
+ * Il loop si interrompe per timeout, uscita volontaria o disconnessione.
  * -------------------------------------------------------------------------- */
 void gaming(struct data *d) {
     d->collectedItems = 0;
@@ -311,32 +319,35 @@ void gaming(struct data *d) {
     adjVisit(d->width, d->height, d->x, d->y, d->visited);
 
     char logmsg[512];
-    snprintf(logmsg, sizeof(logmsg), "GAME: spawn assegnato in (%d,%d)", d->x, d->y);
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: spawn assegnato in (%d,%d)", d->username, d->ip, d->x, d->y);
     log_event(logmsg);
 
     pthread_mutex_lock(&(d->socketWriteMutex));
     sendAdjacentMap(d->user, d->map, d->width, d->height, d->x, d->y);
     pthread_mutex_unlock(&(d->socketWriteMutex));
 
-    log_event("GAME: mappa iniziale inviata, attesa comandi");
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: mappa iniziale inviata, attesa comandi", d->username, d->ip);
+    log_event(logmsg);
 
     char buffer[256];
     while (!isTimeUp()) {
         int r = recv(d->user, buffer, sizeof(buffer) - 1, 0);
         if (r <= 0) {
-            log_event("GAME: client disconnesso durante la partita");
+            snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: client disconnesso durante la partita", d->username, d->ip);
+            log_event(logmsg);
             break;
         }
         buffer[r] = '\0';
         buffer[strcspn(buffer, "\r\n")] = 0;
 
         if (!strcmp(buffer, "exit")) {
-            log_event("GAME: client ha inviato 'exit', uscita volontaria");
+            snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: uscita volontaria", d->username, d->ip);
+            log_event(logmsg);
             break;
         }
 
         snprintf(logmsg, sizeof(logmsg),
-                 "MOVE: comando ricevuto -> '%s' (pos: %d,%d)", buffer, d->x, d->y);
+                 "[%s@%s] MOVE: '%.32s' (pos: %d,%d)", d->username, d->ip, buffer, d->x, d->y);
         log_event(logmsg);
 
         int nextX = d->x;
@@ -351,7 +362,8 @@ void gaming(struct data *d) {
 
         if (win) {
             d->exitFlag = 1;
-            log_event("GAME: giocatore ha attraversato il bordo, uscita trovata");
+            snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: uscita dalla mappa trovata", d->username, d->ip);
+            log_event(logmsg);
             pthread_mutex_lock(&(d->socketWriteMutex));
             send(d->user, "M", 1, 0); /* M = Map exit */
             pthread_mutex_unlock(&(d->socketWriteMutex));
@@ -369,15 +381,16 @@ void gaming(struct data *d) {
                 d->map[d->x][d->y] = PATH; /* l'item viene rimosso dalla mappa */
                 d->collectedItems++;
                 snprintf(logmsg, sizeof(logmsg),
-                         "ITEM: raccolto in (%d,%d), totale=%d", d->x, d->y, d->collectedItems);
+                         "[%s@%s] ITEM: raccolto in (%d,%d), totale=%d", d->username, d->ip, d->x, d->y, d->collectedItems);
                 log_event(logmsg);
             }
 
             snprintf(logmsg, sizeof(logmsg),
-                     "MOVE: spostamento ok -> nuova pos (%d,%d)", d->x, d->y);
+                     "[%s@%s] MOVE: nuova pos (%d,%d)", d->username, d->ip, d->x, d->y);
             log_event(logmsg);
         } else {
-            log_event("MOVE: movimento bloccato (muro)");
+            snprintf(logmsg, sizeof(logmsg), "[%s@%s] MOVE: movimento bloccato (muro)", d->username, d->ip);
+            log_event(logmsg);
         }
         pthread_mutex_unlock(&mutex);
 
@@ -386,20 +399,21 @@ void gaming(struct data *d) {
         pthread_mutex_unlock(&(d->socketWriteMutex));
     }
 
-    log_event("GAME: sessione di gioco terminata");
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: sessione terminata", d->username, d->ip);
+    log_event(logmsg);
 }
 
 /* --------------------------------------------------------------------------
  * newUser  [thread]
  *
- * Punto di ingresso per ogni client connesso. Il flusso e':
- *   1. authenticate()   -> riceve e registra il nome utente
- *   2. lobby            -> aspetta che tutti i client siano pronti
- *   3. gaming()         -> ciclo di gioco
- *   4. writeScore()     -> scrive il risultato su score.txt
- *   5. calcolo vincitore (solo l'ultimo thread che termina)
- *   6. notifica W/L al client
- *   7. cleanup risorse
+ * Entry point per ogni client. Il flusso e':
+ *   1. authenticate()  -> legge il nome utente
+ *   2. lobby           -> aspetta che tutti i giocatori siano pronti
+ *   3. gaming()        -> ciclo di gioco
+ *   4. writeScore()    -> salva il risultato su score.txt
+ *   5. se e' l'ultimo thread a finire, calcola il vincitore
+ *   6. invia W o L al client
+ *   7. libera la memoria e chiude il socket
  * -------------------------------------------------------------------------- */
 void *newUser(void *arg) {
     struct data *d = (struct data *)arg;
@@ -413,7 +427,7 @@ void *newUser(void *arg) {
     nReady++;
 
     snprintf(logmsg, sizeof(logmsg),
-             "LOBBY: '%s' pronto (%d/%d)", username, nReady, nClients);
+             "[%s@%s] LOBBY: in attesa (%d/%d)", username, d->ip, nReady, nClients);
     log_event(logmsg);
 
     if (nReady == nClients) {
@@ -428,7 +442,8 @@ void *newUser(void *arg) {
     }
     pthread_mutex_unlock(&lobbyMutex);
 
-    log_event("LOBBY: uscita dalla sala d'attesa, partita avviata");
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] LOBBY: partita avviata, inizio gioco", username, d->ip);
+    log_event(logmsg);
 
     /* thread nebbia: invia la mappa sfocata periodicamente in background */
     pthread_t blurTid;
@@ -446,7 +461,7 @@ void *newUser(void *arg) {
     nReady--;
 
     snprintf(logmsg, sizeof(logmsg),
-             "ENDGAME: '%s' ha terminato (%d ancora in gioco)", username, nReady);
+             "[%s@%s] ENDGAME: partita terminata (%d ancora in gioco)", username, d->ip, nReady);
     log_event(logmsg);
 
     /*
@@ -490,15 +505,18 @@ void *newUser(void *arg) {
 
     /* notifica W (vinto) o L (perso) al client */
     if (strcmp(winner, username) == 0) {
-        log_event("RESULT: vincitore notificato");
+        snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", username, d->ip);
+        log_event(logmsg);
         send(d->user, "W", 1, 0);
     } else {
-        log_event("RESULT: perdente notificato");
+        snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", username, d->ip);
+        log_event(logmsg);
         send(d->user, "L", 1, 0);
     }
 
     /* ----- CLEANUP ----- */
-    log_event("CLEANUP: chiusura socket e liberazione memoria client");
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa", username, d->ip);
+    log_event(logmsg);
     close(d->user);
 
     for (int i = 0; i < d->height; i++)
@@ -514,10 +532,10 @@ void *newUser(void *arg) {
 /* --------------------------------------------------------------------------
  * main
  *
- * Inizializza il server TCP sulla porta 8080, apre il log globale, genera
- * la mappa e rimane in ascolto tramite select(). Accetta nuovi client finche'
- * non riceve il segnale di fine partita dalla pipe (scritto dall'ultimo
- * thread che termina).
+ * Apre il log, azzera score.txt, crea il socket TCP sulla porta 8080 e
+ * genera la mappa. Poi entra nel loop di select() che accetta nuovi client
+ * finche' l'ultimo thread attivo non segnala la fine della partita
+ * scrivendo sulla wakeup_pipe.
  * -------------------------------------------------------------------------- */
 int main() {
     srand(time(NULL));
@@ -603,6 +621,8 @@ int main() {
             /* alloca e inizializza la struttura dati del client */
             struct data *d = malloc(sizeof(struct data));
             d->user           = cfd;
+            strncpy(d->ip, inet_ntoa(cli.sin_addr), INET_ADDRSTRLEN - 1);
+            d->ip[INET_ADDRSTRLEN - 1] = '\0';
             d->map            = map;
             d->width          = w;
             d->height         = h;
