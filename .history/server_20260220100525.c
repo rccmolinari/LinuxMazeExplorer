@@ -15,6 +15,7 @@
 
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
+ * Valori più alti danno più tempo al giocatore prima che la mappa si oscuri.
  */
 #define SECONDS_TO_BLUR 10
 
@@ -57,7 +58,8 @@ int scoreChanging = 0;  /* semaforo logico: 1 mentre qualcuno scrive score.txt  
 
 /*
  * fd globale del file di log: aperto nel main e condiviso da tutti i thread.
- * Tutte le scritture passano per log_event() che e' thread-safe
+ * Tutte le scritture passano per log_event() che e' thread-safe grazie al
+ * fatto che write() su file e' atomica per dimensioni <= PIPE_BUF.
  */
 int gLogFd = -1;
 
@@ -90,7 +92,7 @@ struct data {
  * log_event
  *
  * Scrive una riga su gLogFd nel formato [YYYY-MM-DD HH:MM:SS] <msg>.
- * Il logMutex garantisce che i messaggi di thread diversi non si
+ * Il logMutex garantisceche i messaggi di thread diversi non si 
  * mescolino tra loro.
  * -------------------------------------------------------------------------- */
     void log_event(const char *msg) {

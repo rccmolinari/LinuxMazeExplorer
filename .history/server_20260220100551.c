@@ -15,6 +15,7 @@
 
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
+ * Valori più alti danno più tempo al giocatore prima che la mappa si oscuri.
  */
 #define SECONDS_TO_BLUR 10
 

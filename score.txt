@@ -1,3 +1,2 @@
-KUKO 0 0
-ZEZO 0 1
-FAUE 0 0
+modem 0 1
+mimo 0 1
