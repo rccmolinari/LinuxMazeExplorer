@@ -98,7 +98,7 @@ void *silentWaitBlurredMap(void *arg) {
         int n = recv(args->sockfd, &type, sizeof(char), MSG_PEEK | MSG_DONTWAIT);
         if(n>0 && type == 'M') {
             recv(args->sockfd, &type, sizeof(char), 0); // consuma 'M'
-            write(STDOUT_FILENO, "\nSEI USCITO DALLA MAPPA, ATTENDI I RISULTATI!***\n", 48);
+            write(STDOUT_FILENO, "\n SEI USCITO DALLA MAPPA, ATTENDI I RISULTATI!\n", 48);
             /* fine partita: segnala al main ed esci */
             pthread_mutex_lock(&endMutex);
             end = 1;

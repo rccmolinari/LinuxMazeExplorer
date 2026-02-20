@@ -197,7 +197,7 @@ void *asyncSendBlurredMap(void *arg) {
     while (!isTimeUp()) {
         sleep(SECONDS_TO_BLUR);
         if (d->user <= 0) break;
-        if(isTimeUp()) break;
+
         pthread_mutex_lock(&(d->socketWriteMutex));
         sendBlurredMap(d->user, d->map, d->width, d->height, d->x, d->y, d->visited);
         pthread_mutex_unlock(&(d->socketWriteMutex));

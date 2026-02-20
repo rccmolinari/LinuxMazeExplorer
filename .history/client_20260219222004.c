@@ -98,25 +98,33 @@ void *silentWaitBlurredMap(void *arg) {
         int n = recv(args->sockfd, &type, sizeof(char), MSG_PEEK | MSG_DONTWAIT);
         if(n>0 && type == 'M') {
             recv(args->sockfd, &type, sizeof(char), 0); // consuma 'M'
-            write(STDOUT_FILENO, "\nSEI USCITO DALLA MAPPA, ATTENDI I RISULTATI!***\n", 48);
+            write(STDOUT_FILENO, "\n SEI USCITO DALLA MAPPA, ATTENDI I RISULTATI!\n", 48);
             /* fine partita: segnala al main ed esci */
             pthread_mutex_lock(&endMutex);
             end = 1;
             pthread_mutex_unlock(&endMutex);
         }
         if(n > 0 && type == 'E') {
-            /* fine sessione: consuma 'E', leggi W o L e stampa il risultato */
-            char wol[2];
-            recv(args->sockfd, &type, sizeof(char), 0);
-            int n = recv(args->sockfd, wol, 1, 0);
+            recv(args->sockfd, &type, 1, 0); // consuma E
+        
+            char wol;
+            int r = recv(args->sockfd, &wol, 1, 0); // legge W o L
+        
             system("clear");
-            if(n > 0 && wol[0] == 'W') {
+            if(r > 0 && wol == 'W') {
                 printf("\nVITTORIA!\n");
-            } else if(n > 0 && wol[0] == 'L') {
+            } else if(r > 0 && wol == 'L') {
                 printf("\nSCONFITTA!\n");
+            } else {
+                printf("\nCONNESSIONE PERSA PRIMA DEL RISULTATO\n");
             }
-            send(args->sockfd, "x", 1, 0); // notifica al server che abbiamo ricevuto il risultato
-            kill(getpid(), SIGUSR1); 
+        
+            pthread_mutex_lock(&endMutex);
+            end = 1;
+            pthread_mutex_unlock(&endMutex);
+        
+            pthread_mutex_unlock(&socketMutex); // rilascia PRIMA di kill
+            kill(getpid(), SIGUSR1);
             close(args->sockfd);
             break;
         }

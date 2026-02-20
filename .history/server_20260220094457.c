@@ -23,7 +23,7 @@
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 10
+#define TIMER 30
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -194,10 +194,10 @@ void *asyncSendBlurredMap(void *arg) {
         pthread_cond_wait(&lobbyCond, &lobbyMutex);
     pthread_mutex_unlock(&lobbyMutex);
 
-    while (!isTimeUp()) {
+    while (1) {
         sleep(SECONDS_TO_BLUR);
         if (d->user <= 0) break;
-        if(isTimeUp()) break;
+
         pthread_mutex_lock(&(d->socketWriteMutex));
         sendBlurredMap(d->user, d->map, d->width, d->height, d->x, d->y, d->visited);
         pthread_mutex_unlock(&(d->socketWriteMutex));
@@ -486,18 +486,18 @@ pthread_mutex_lock(&gWinnerMutex);
 while (!gWinnerCalculated)
     pthread_cond_wait(&gWinnerCond, &gWinnerMutex);
 pthread_mutex_unlock(&gWinnerMutex);
-char closeM;
+char close;
 /* notifica W o L */
 if (strcmp(gWinner, username) == 0) {
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", username, d->ip);
     log_event(logmsg);
     send(d->user, "W", 1, 0);
-    recv(d->user, &closeM, 1, 0);
+    recv(d->user, &close, 1, 0);
 } else {
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", username, d->ip);
     log_event(logmsg);
     send(d->user, "L", 1, 0);
-    recv(d->user, &closeM, 1, 0);
+    recv(d->user, &close, 1, 0);
 }
     /* ----- CLEANUP ----- */
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa", username, d->ip);
@@ -640,7 +640,6 @@ int main() {
     }
 
     log_event("SERVER: socket chiuso, processo terminato");
-    sleep(5);
     close(sockfd);
     close(gLogFd);
     return 0;

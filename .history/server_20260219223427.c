@@ -23,7 +23,7 @@
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 10
+#define TIMER 30
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -157,8 +157,8 @@ void printWinnerWithPipe(char *winner) {
         close(fd[1]);
 
         execlp("sh", "sh", "-c",
-               "sort -k3,3nr -k2,2nr score.txt | head -n1 | awk '{print $1}'",
-               NULL);
+            "sort -t';' -k3,3nr -k2,2nr score.txt | head -n1 | awk -F';' '{print $1}'",
+            NULL);
         exit(1); /* raggiunto solo se execlp fallisce */
     } else {
         /* padre: legge il nome del vincitore dal lato lettura della pipe */
@@ -194,10 +194,10 @@ void *asyncSendBlurredMap(void *arg) {
         pthread_cond_wait(&lobbyCond, &lobbyMutex);
     pthread_mutex_unlock(&lobbyMutex);
 
-    while (!isTimeUp()) {
+    while (1) {
         sleep(SECONDS_TO_BLUR);
         if (d->user <= 0) break;
-        if(isTimeUp()) break;
+
         pthread_mutex_lock(&(d->socketWriteMutex));
         sendBlurredMap(d->user, d->map, d->width, d->height, d->x, d->y, d->visited);
         pthread_mutex_unlock(&(d->socketWriteMutex));
@@ -228,8 +228,8 @@ void writeScore(char *username, struct data *d) {
     int scoreFile = open("score.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
     if (scoreFile >= 0) {
         char buffer[512];
-        int len = snprintf(buffer, sizeof(buffer), "%s %d %d\n",
-                           username, d->collectedItems, d->exitFlag);
+        int len = snprintf(buffer, sizeof(buffer), "%s;%d;%d\n",
+        username, d->collectedItems, d->exitFlag);
         write(scoreFile, buffer, len);
         close(scoreFile);
 
@@ -478,6 +478,9 @@ if (nReady == 0) {
     gWinnerCalculated = 1;
     pthread_cond_broadcast(&gWinnerCond); /* sveglia TUTTI i thread in attesa */
     pthread_mutex_unlock(&gWinnerMutex);
+
+    write(wakeup_pipe[1], "X", 1);
+    close(wakeup_pipe[1]);
 }
 pthread_mutex_unlock(&lobbyMutex);
 
@@ -486,19 +489,22 @@ pthread_mutex_lock(&gWinnerMutex);
 while (!gWinnerCalculated)
     pthread_cond_wait(&gWinnerCond, &gWinnerMutex);
 pthread_mutex_unlock(&gWinnerMutex);
-char closeM;
+
 /* notifica W o L */
 if (strcmp(gWinner, username) == 0) {
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", username, d->ip);
     log_event(logmsg);
     send(d->user, "W", 1, 0);
-    recv(d->user, &closeM, 1, 0);
 } else {
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", username, d->ip);
     log_event(logmsg);
     send(d->user, "L", 1, 0);
-    recv(d->user, &closeM, 1, 0);
 }
+
+/* aspetta che il client legga il risultato prima di chiudere */
+shutdown(d->user, SHUT_WR);  /* segnala fine invio senza chiudere subito */
+char drain[16];
+recv(d->user, drain, sizeof(drain), 0); /* aspetta che il client chiuda */
     /* ----- CLEANUP ----- */
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa", username, d->ip);
     log_event(logmsg);
@@ -509,11 +515,7 @@ if (strcmp(gWinner, username) == 0) {
     free(d->visited);
     pthread_mutex_destroy(&(d->socketWriteMutex));
     free(d);
-    if(nReady == 0) {
-        log_event("CLEANUP: ultimo client, chiusura wakeup_pipe");
-        close(wakeup_pipe[0]);
-        close(wakeup_pipe[1]);
-    }
+
     return NULL;
 }
 
@@ -640,7 +642,6 @@ int main() {
     }
 
     log_event("SERVER: socket chiuso, processo terminato");
-    sleep(5);
     close(sockfd);
     close(gLogFd);
     return 0;

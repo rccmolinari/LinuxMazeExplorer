@@ -1,2 +1,3 @@
-faue 1 1
-lala 0 1
+KUKO 0 0
+ZEZO 0 1
+FAUE 0 0
