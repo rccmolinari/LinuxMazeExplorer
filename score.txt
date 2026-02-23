@@ -1,2 +1,2 @@
-modem 0 1
-mimo 0 1
+zio 0 1
+ddd 0 0
