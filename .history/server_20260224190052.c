@@ -16,13 +16,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 10
+#define SECONDS_TO_BLUR 5
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 10
+#define TIMER 40
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -36,6 +36,7 @@
  * logMutex       -> garantisce che le righe di log non si mescolino tra thread
  * -------------------------------------------------------------------------- */
 pthread_mutex_t mutex      = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t userMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t scoreMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  scoreCond  = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t lobbyMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -54,7 +55,7 @@ int nClients      = 0;  /* quanti client sono connessi in totale                
 int gameStarted   = 0;  /* flag: la partita e' iniziata                         */
 int timeUp        = 0;  /* flag: il timer e' scaduto                            */
 int scoreChanging = 0;  /* semaforo logico: 1 mentre qualcuno scrive score.txt  */
-int nEnd = 0;
+
 /*
  * fd globale del file di log: aperto nel main e condiviso da tutti i thread.
  * Tutte le scritture passano per log_event() che e' thread-safe
@@ -204,6 +205,11 @@ void *asyncSendBlurredMap(void *arg) {
     return NULL;
 }
 
+int registration(char *username, char * password) {
+    int fd = open("users.txt", O_RDWR | O_CREAT, 0644);
+    
+}
+
 /* --------------------------------------------------------------------------
  * writeScore
  *
@@ -213,6 +219,7 @@ void *asyncSendBlurredMap(void *arg) {
  * Gli accessi sono serializzati con scoreMutex + scoreChanging per evitare
  * che due thread scrivano contemporaneamente e corrompano il file.
  * -------------------------------------------------------------------------- */
+
 void writeScore(char *username, struct data *d) {
     pthread_mutex_lock(&scoreMutex);
 
@@ -504,8 +511,7 @@ if (strcmp(gWinner, username) == 0) {
     free(d->visited);
     pthread_mutex_destroy(&(d->socketWriteMutex));
     free(d);
-    nEnd++;
-    if(nEnd == nClients) {
+    if(nReady == 0) {
         log_event("CLEANUP: ultimo client, chiusura wakeup_pipe");
         close(wakeup_pipe[0]);
         close(wakeup_pipe[1]);

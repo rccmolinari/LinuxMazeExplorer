@@ -1,67 +1,47 @@
-[2026-02-23 20:44:59] SERVER: avvio in corso
-[2026-02-23 20:44:59] SERVER: in ascolto sulla porta 8080
-[2026-02-23 20:45:03] SERVER: connessione accettata da 127.0.0.1 (client #1)
-[2026-02-23 20:45:06] SERVER: connessione accettata da 127.0.0.1 (client #2)
-[2026-02-23 20:45:07] [ddd@127.0.0.1] AUTH: utente connesso
-[2026-02-23 20:45:07] [ddd@127.0.0.1] LOBBY: in attesa (1/2)
-[2026-02-23 20:45:10] [zio@127.0.0.1] AUTH: utente connesso
-[2026-02-23 20:45:10] [zio@127.0.0.1] LOBBY: in attesa (2/2)
-[2026-02-23 20:45:10] LOBBY: tutti i giocatori pronti, partita in avvio
-[2026-02-23 20:45:10] [zio@127.0.0.1] LOBBY: partita avviata, inizio gioco
-[2026-02-23 20:45:10] [zio@127.0.0.1] GAME: spawn assegnato in (1,1)
-[2026-02-23 20:45:10] [ddd@127.0.0.1] LOBBY: partita avviata, inizio gioco
-[2026-02-23 20:45:10] [ddd@127.0.0.1] GAME: spawn assegnato in (1,2)
-[2026-02-23 20:45:10] TIMER: countdown avviato
-[2026-02-23 20:45:10] [zio@127.0.0.1] GAME: mappa iniziale inviata, attesa comandi
-[2026-02-23 20:45:10] [ddd@127.0.0.1] GAME: mappa iniziale inviata, attesa comandi
-[2026-02-23 20:45:11] [zio@127.0.0.1] MOVE: 'W' (pos: 1,1)
-[2026-02-23 20:45:11] [zio@127.0.0.1] MOVE: nuova pos (0,1)
-[2026-02-23 20:45:12] [zio@127.0.0.1] MOVE: 'W' (pos: 0,1)
-[2026-02-23 20:45:12] [zio@127.0.0.1] GAME: uscita dalla mappa trovata
-[2026-02-23 20:45:12] [zio@127.0.0.1] GAME: sessione terminata
-[2026-02-23 20:45:12] [zio@127.0.0.1] SCORE: oggetti=0 exit=1
-[2026-02-23 20:45:12] [zio@127.0.0.1] ENDGAME: partita terminata (1 ancora in gioco)
-[2026-02-23 20:45:14] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:14] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:15] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:15] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:15] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:15] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:15] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:15] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:16] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:16] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:16] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:16] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:17] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:17] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:17] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:17] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:18] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:18] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:18] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:18] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:19] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:19] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:19] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:19] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:20] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:20] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:20] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:20] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:20] TIMER: tempo scaduto, fine partita
-[2026-02-23 20:45:21] [ddd@127.0.0.1] MOVE: 'W' (pos: 1,2)
-[2026-02-23 20:45:21] [ddd@127.0.0.1] MOVE: movimento bloccato (muro)
-[2026-02-23 20:45:21] [ddd@127.0.0.1] GAME: sessione terminata
-[2026-02-23 20:45:21] [ddd@127.0.0.1] SCORE: oggetti=0 exit=0
-[2026-02-23 20:45:21] [ddd@127.0.0.1] ENDGAME: partita terminata (0 ancora in gioco)
-[2026-02-23 20:45:21] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
-[2026-02-23 20:45:21] ENDGAME: vincitore -> 'zio'
-[2026-02-23 20:45:21] [ddd@127.0.0.1] RESULT: sconfitto
-[2026-02-23 20:45:21] [zio@127.0.0.1] RESULT: vincitore
-[2026-02-23 20:45:21] [zio@127.0.0.1] CLEANUP: connessione chiusa
-[2026-02-23 20:45:21] CLEANUP: ultimo client, chiusura wakeup_pipe
-[2026-02-23 20:45:21] SERVER: segnale di chiusura ricevuto, arresto in corso
-[2026-02-23 20:45:21] SERVER: socket chiuso, processo terminato
-[2026-02-23 20:45:21] [ddd@127.0.0.1] CLEANUP: connessione chiusa
-[2026-02-23 20:45:21] CLEANUP: ultimo client, chiusura wakeup_pipe
+[2026-02-24 22:26:53] SERVER: avvio in corso
+[2026-02-24 22:26:53] SERVER: in ascolto sulla porta 8080
+[2026-02-24 22:26:55] SERVER: connessione accettata da 127.0.0.1 (client #1)
+[2026-02-24 22:26:58] SERVER: connessione accettata da 127.0.0.1 (client #2)
+[2026-02-24 22:26:59] [faue@127.0.0.1] AUTH: utente connesso
+[2026-02-24 22:26:59] [faue@127.0.0.1] LOBBY: in attesa (1/2)
+[2026-02-24 22:27:02] [niger@127.0.0.1] AUTH: utente connesso
+[2026-02-24 22:27:02] [niger@127.0.0.1] LOBBY: in attesa (2/2)
+[2026-02-24 22:27:02] LOBBY: tutti i giocatori pronti, partita in avvio
+[2026-02-24 22:27:02] [niger@127.0.0.1] LOBBY: partita avviata, inizio gioco
+[2026-02-24 22:27:02] [faue@127.0.0.1] LOBBY: partita avviata, inizio gioco
+[2026-02-24 22:27:02] [niger@127.0.0.1] GAME: spawn assegnato in (2,1)
+[2026-02-24 22:27:02] [faue@127.0.0.1] GAME: spawn assegnato in (2,1)
+[2026-02-24 22:27:02] [niger@127.0.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-02-24 22:27:02] TIMER: countdown avviato
+[2026-02-24 22:27:02] [faue@127.0.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-02-24 22:27:03] [niger@127.0.0.1] MOVE: 'D' (pos: 2,1)
+[2026-02-24 22:27:03] [niger@127.0.0.1] MOVE: movimento bloccato (muro)
+[2026-02-24 22:27:03] [niger@127.0.0.1] MOVE: 'W' (pos: 2,1)
+[2026-02-24 22:27:03] [niger@127.0.0.1] ITEM: raccolto in (1,1), totale=1
+[2026-02-24 22:27:03] [niger@127.0.0.1] MOVE: nuova pos (1,1)
+[2026-02-24 22:27:04] [niger@127.0.0.1] MOVE: 'W' (pos: 1,1)
+[2026-02-24 22:27:04] [niger@127.0.0.1] MOVE: nuova pos (0,1)
+[2026-02-24 22:27:04] [niger@127.0.0.1] MOVE: 'W' (pos: 0,1)
+[2026-02-24 22:27:04] [niger@127.0.0.1] GAME: uscita dalla mappa trovata
+[2026-02-24 22:27:04] [niger@127.0.0.1] GAME: sessione terminata
+[2026-02-24 22:27:04] [niger@127.0.0.1] SCORE: oggetti=1 exit=1
+[2026-02-24 22:27:04] [niger@127.0.0.1] ENDGAME: partita terminata (1 ancora in gioco)
+[2026-02-24 22:27:07] [faue@127.0.0.1] MOVE: 'W' (pos: 2,1)
+[2026-02-24 22:27:07] [faue@127.0.0.1] MOVE: nuova pos (1,1)
+[2026-02-24 22:27:08] [faue@127.0.0.1] MOVE: 'A' (pos: 1,1)
+[2026-02-24 22:27:08] [faue@127.0.0.1] MOVE: nuova pos (1,0)
+[2026-02-24 22:27:08] [faue@127.0.0.1] MOVE: 'A' (pos: 1,0)
+[2026-02-24 22:27:08] [faue@127.0.0.1] GAME: uscita dalla mappa trovata
+[2026-02-24 22:27:08] [faue@127.0.0.1] GAME: sessione terminata
+[2026-02-24 22:27:08] [faue@127.0.0.1] SCORE: oggetti=0 exit=1
+[2026-02-24 22:27:08] [faue@127.0.0.1] ENDGAME: partita terminata (0 ancora in gioco)
+[2026-02-24 22:27:08] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
+[2026-02-24 22:27:09] ENDGAME: vincitore -> 'niger'
+[2026-02-24 22:27:09] [faue@127.0.0.1] RESULT: sconfitto
+[2026-02-24 22:27:09] [niger@127.0.0.1] RESULT: vincitore
+[2026-02-24 22:27:09] [niger@127.0.0.1] CLEANUP: connessione chiusa
+[2026-02-24 22:27:09] [faue@127.0.0.1] CLEANUP: connessione chiusa
+[2026-02-24 22:27:09] CLEANUP: ultimo client, chiusura wakeup_pipe
+[2026-02-24 22:27:09] SERVER: segnale di chiusura ricevuto, arresto in corso
+[2026-02-24 22:27:09] SERVER: socket chiuso, processo terminato
+[2026-02-24 22:27:12] TIMER: tempo scaduto, fine partita

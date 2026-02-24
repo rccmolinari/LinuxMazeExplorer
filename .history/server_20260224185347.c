@@ -16,13 +16,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 10
+#define SECONDS_TO_BLUR 5
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 10
+#define TIMER 40
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -54,7 +54,7 @@ int nClients      = 0;  /* quanti client sono connessi in totale                
 int gameStarted   = 0;  /* flag: la partita e' iniziata                         */
 int timeUp        = 0;  /* flag: il timer e' scaduto                            */
 int scoreChanging = 0;  /* semaforo logico: 1 mentre qualcuno scrive score.txt  */
-int nEnd = 0;
+
 /*
  * fd globale del file di log: aperto nel main e condiviso da tutti i thread.
  * Tutte le scritture passano per log_event() che e' thread-safe
@@ -504,8 +504,7 @@ if (strcmp(gWinner, username) == 0) {
     free(d->visited);
     pthread_mutex_destroy(&(d->socketWriteMutex));
     free(d);
-    nEnd++;
-    if(nEnd == nClients) {
+    if(nReady == 0) {
         log_event("CLEANUP: ultimo client, chiusura wakeup_pipe");
         close(wakeup_pipe[0]);
         close(wakeup_pipe[1]);

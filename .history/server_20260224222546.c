@@ -504,8 +504,7 @@ if (strcmp(gWinner, username) == 0) {
     free(d->visited);
     pthread_mutex_destroy(&(d->socketWriteMutex));
     free(d);
-    nEnd++;
-    if(nEnd == nClients) {
+    if(nReady == 0) {
         log_event("CLEANUP: ultimo client, chiusura wakeup_pipe");
         close(wakeup_pipe[0]);
         close(wakeup_pipe[1]);

@@ -16,13 +16,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 10
+#define SECONDS_TO_BLUR 5
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 10
+#define TIMER 40
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -36,6 +36,7 @@
  * logMutex       -> garantisce che le righe di log non si mescolino tra thread
  * -------------------------------------------------------------------------- */
 pthread_mutex_t mutex      = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t userMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t scoreMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  scoreCond  = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t lobbyMutex = PTHREAD_MUTEX_INITIALIZER;
@@ -54,7 +55,7 @@ int nClients      = 0;  /* quanti client sono connessi in totale                
 int gameStarted   = 0;  /* flag: la partita e' iniziata                         */
 int timeUp        = 0;  /* flag: il timer e' scaduto                            */
 int scoreChanging = 0;  /* semaforo logico: 1 mentre qualcuno scrive score.txt  */
-int nEnd = 0;
+int nEnd = 0;         /* quanti client hanno completato la sessione (usciti o timeout) */
 /*
  * fd globale del file di log: aperto nel main e condiviso da tutti i thread.
  * Tutte le scritture passano per log_event() che e' thread-safe
@@ -172,6 +173,14 @@ void printWinnerWithPipe(char *winner) {
         wait(NULL); /* evita processi zombie */
     }
 }
+/* Lettura thread-safe di timeUp */
+int isTimeUp() {
+    pthread_mutex_lock(&timerMutex);
+    int r = timeUp;
+    pthread_mutex_unlock(&timerMutex);
+    return r;
+}
+
 
 /* --------------------------------------------------------------------------
  * asyncSendBlurredMap  [thread]
@@ -203,7 +212,89 @@ void *asyncSendBlurredMap(void *arg) {
     }
     return NULL;
 }
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/socket.h>
 
+int registration(struct data *d) {
+    int fd = open("users.txt", O_RDWR | O_CREAT, 0644);
+    if (fd < 0) {
+        log_error("open users.txt in registration");
+        return -2;
+    }
+
+    char username[256], password[256];
+    int dusr = recv(d->user, username, sizeof(username) - 1, 0);
+    int dpass = recv(d->user, password, sizeof(password) - 1, 0);
+    
+    if (dusr <= 0 || dpass <= 0) {
+        log_error("recv in registration");
+        close(fd);
+        return -2;
+    }
+    
+    username[dusr] = '\0';
+    password[dpass] = '\0';
+
+    pthread_mutex_lock(&userMutex);
+
+    lseek(fd, 0, SEEK_SET);
+
+    char file_username[256];
+    int idx = 0;
+    int user_exists = 0;
+    char c;
+    ssize_t n;
+
+    while ((n = read(fd, &c, 1)) > 0) {
+        if (c == ';') {
+            file_username[idx] = '\0';
+            
+            if (strcmp(file_username, username) == 0) {
+                user_exists = 1;
+                break;
+            }
+            
+            while ((n = read(fd, &c, 1)) > 0 && c != '\n');
+            
+            idx = 0;
+            
+        } else if (c == '\n') {
+            idx = 0;
+        } else {
+            if (idx < (int)(sizeof(file_username) - 1)) {
+                file_username[idx++] = c;
+            }
+        }
+    }
+
+    if (n < 0) {
+        log_error("read users.txt in registration");
+        pthread_mutex_unlock(&userMutex);
+        close(fd);
+        return -2;
+    }
+
+    if (user_exists) {
+        pthread_mutex_unlock(&userMutex);
+        close(fd);
+        return -1; 
+    }
+
+    lseek(fd, 0, SEEK_END);
+    write(fd, username, strlen(username));
+    write(fd, ";", 1);
+    write(fd, password, strlen(password));
+    write(fd, "\n", 1);
+    
+    close(fd);
+    pthread_mutex_unlock(&userMutex);
+    
+    strcpy(d->username, username);
+    
+    return 1;
+}
 /* --------------------------------------------------------------------------
  * writeScore
  *
@@ -213,6 +304,7 @@ void *asyncSendBlurredMap(void *arg) {
  * Gli accessi sono serializzati con scoreMutex + scoreChanging per evitare
  * che due thread scrivano contemporaneamente e corrompano il file.
  * -------------------------------------------------------------------------- */
+
 void writeScore(char *username, struct data *d) {
     pthread_mutex_lock(&scoreMutex);
 
@@ -257,13 +349,6 @@ void timer() {
     log_event("TIMER: tempo scaduto, fine partita");
 }
 
-/* Lettura thread-safe di timeUp */
-int isTimeUp() {
-    pthread_mutex_lock(&timerMutex);
-    int r = timeUp;
-    pthread_mutex_unlock(&timerMutex);
-    return r;
-}
 
 /* --------------------------------------------------------------------------
  * authenticate
@@ -272,27 +357,76 @@ int isTimeUp() {
  * connessione. Lo salva sia in usernamesrc che in d->username, cosi'
  * tutte le funzioni successive possono includerlo nei log.
  * -------------------------------------------------------------------------- */
-void authenticate(struct data *d, char *usernamesrc) {
+#include <unistd.h>
+#include <fcntl.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <stdio.h>
+
+int authenticate(struct data *d) {
     char username[256];
     int readedbyte = recv(d->user, username, sizeof(username) - 1, 0);
     if (readedbyte <= 0) {
         char logmsg[512];
         snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: ricezione username fallita, client disconnesso", d->ip);
         log_event(logmsg);
-        return;
+        return -2;
     }
 
     username[readedbyte] = '\0';
-    username[strcspn(username, "\r\n")] = 0;
-    strcpy(usernamesrc, username);
-    strncpy(d->username, username, sizeof(d->username) - 1);
-    d->username[sizeof(d->username) - 1] = '\0';
+    username[strcspn(username, "\r\n")] = '\0';
 
+    int fd = open("users.txt", O_RDONLY);
+    if (fd < 0) {
+        log_error("open users.txt in authenticate");
+        return -2;
+    }
+
+    int found = 0;
+    pthread_mutex_lock(&userMutex);
+
+    char file_username[256];
+    int idx = 0;
+    char c;
+    ssize_t n;
+
+    while ((n = read(fd, &c, 1)) > 0) {
+        if (c == ';') {
+            file_username[idx] = '\0';
+            
+            if (strcmp(file_username, username) == 0) {
+                found = 1;
+                break;
+            }
+
+            while ((n = read(fd, &c, 1)) > 0 && c != '\n');
+            idx = 0;
+        } else if (c == '\n') {
+            idx = 0;
+        } else {
+            if (idx < (int)(sizeof(file_username) - 1)) {
+                file_username[idx++] = c;
+            }
+        }
+    }
+
+    pthread_mutex_unlock(&userMutex);
+    close(fd);
+
+    if (!found) {
+        char logmsg[512];
+        snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: utente '%s' non registrato, client disconnesso", d->ip, username);
+        log_event(logmsg);
+        return -2;
+    }
+
+    strcpy(d->username, username);
     char logmsg[512];
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] AUTH: utente connesso", username, d->ip);
     log_event(logmsg);
+    
+    return 1;
 }
-
 /* --------------------------------------------------------------------------
  * gaming
  *
@@ -415,17 +549,46 @@ void gaming(struct data *d) {
  * -------------------------------------------------------------------------- */
 void *newUser(void *arg) {
     struct data *d = (struct data *)arg;
-    char username[256] = {0};
     char logmsg[512];
+    char choice[2];
+    recv(d->user, choice, sizeof(choice) - 1, 0);
+    choice[1] = '\0';
+    int successful = 1;
+    if (strcmp(choice, "R") == 0) {
+        if (registration(d) < 1) {
+            send(d->user, "N", 1, 0);
+            close(d->user);
+            free(d);
+            nClients--;
+            successful = 0;
+        }
+        send(d->user, "Y", 1, 0);
+        if(authenticate(d) < 1) {
+            send(d->user, "N", 1, 0);
+            close(d->user);
+            nClients--;
+            successful = 0;
+        }
+        send(d->user, "Y", 1, 0);
+    }
+    else if (strcmp(choice, "L") == 0) {
+        if(authenticate(d) < 1) {
+            send(d->user, "N", 1, 0);
+            close(d->user);
+            nClients--;
+            successful = 0;
 
-    authenticate(d, username);
+        }
+        send(d->user, "Y", 1, 0);
+    }
 
     /* ----- LOBBY ----- */
+    if(successful){
     pthread_mutex_lock(&lobbyMutex);
     nReady++;
 
     snprintf(logmsg, sizeof(logmsg),
-             "[%s@%s] LOBBY: in attesa (%d/%d)", username, d->ip, nReady, nClients);
+             "[%s@%s] LOBBY: in attesa (%d/%d)", d->username, d->ip, nReady, nClients);
     log_event(logmsg);
 
     if (nReady == nClients) {
@@ -440,7 +603,7 @@ void *newUser(void *arg) {
     }
     pthread_mutex_unlock(&lobbyMutex);
 
-    snprintf(logmsg, sizeof(logmsg), "[%s@%s] LOBBY: partita avviata, inizio gioco", username, d->ip);
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] LOBBY: partita avviata, inizio gioco", d->username, d->ip);
     log_event(logmsg);
 
     /* thread nebbia: invia la mappa sfocata periodicamente in background */
@@ -449,7 +612,7 @@ void *newUser(void *arg) {
     pthread_detach(blurTid);
 
     gaming(d);
-    writeScore(username, d);
+    writeScore(d->username, d);
 
     /* notifica generica di fine partita (il client aspetta poi W o L) */
     send(d->user, "E", 1, 0);
@@ -459,7 +622,7 @@ pthread_mutex_lock(&lobbyMutex);
 nReady--;
 
 snprintf(logmsg, sizeof(logmsg),
-         "[%s@%s] ENDGAME: partita terminata (%d ancora in gioco)", username, d->ip, nReady);
+         "[%s@%s] ENDGAME: partita terminata (%d ancora in gioco)", d->username, d->ip, nReady);
 log_event(logmsg);
 
 if (nReady == 0) {
@@ -483,19 +646,20 @@ while (!gWinnerCalculated)
 pthread_mutex_unlock(&gWinnerMutex);
 char closeM;
 /* notifica W o L */
-if (strcmp(gWinner, username) == 0) {
-    snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", username, d->ip);
+if (strcmp(gWinner, d->username) == 0) {
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", d->username, d->ip);
     log_event(logmsg);
     send(d->user, "W", 1, 0);
     recv(d->user, &closeM, 1, 0);
 } else {
-    snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", username, d->ip);
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", d->username, d->ip);
     log_event(logmsg);
     send(d->user, "L", 1, 0);
     recv(d->user, &closeM, 1, 0);
 }
+}
     /* ----- CLEANUP ----- */
-    snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa", username, d->ip);
+    snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa", d->username, d->ip);
     log_event(logmsg);
     close(d->user);
 
@@ -505,8 +669,10 @@ if (strcmp(gWinner, username) == 0) {
     pthread_mutex_destroy(&(d->socketWriteMutex));
     free(d);
     nEnd++;
+
     if(nEnd == nClients) {
         log_event("CLEANUP: ultimo client, chiusura wakeup_pipe");
+        write(wakeup_pipe[1], "X", 1); /* sveglia la select() del main per chiudere il server */
         close(wakeup_pipe[0]);
         close(wakeup_pipe[1]);
     }
