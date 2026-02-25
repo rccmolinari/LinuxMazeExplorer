@@ -1,2 +1,2 @@
 pasquale 0 1
-zio 0 1
+zio 0 0
