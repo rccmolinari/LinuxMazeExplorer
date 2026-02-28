@@ -97,7 +97,7 @@ char **generateMap(int *width, int *height) {
             return NULL;
         }
         for(int j=0;j<w;j++) {
-            map[i][j] = WALL;  //la mappa inzialmente è tutta muri
+            map[i][j] = WALL;  
             visited[i][j] = 0;
         }
     }

@@ -237,13 +237,12 @@ int main(int argc, char* argv[]) {
     }
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     char *ipaddress = argv[1];
-    int port = atoi(argv[2]);
     if (sockfd < 0) { perror("socket"); return 1; }
     
     struct sockaddr_in srv;
     memset(&srv, 0, sizeof(srv));
     srv.sin_family = AF_INET;
-    srv.sin_port = htons(port);
+    srv.sin_port = htons(8080);
     inet_pton(AF_INET, ipaddress, &srv.sin_addr);
     
     if (connect(sockfd, (struct sockaddr*)&srv, sizeof(srv)) < 0) {

@@ -559,7 +559,7 @@ void gaming(struct data *d) {
  * newUser  [thread]
  *
  * Entry point per ogni client. Il flusso e':
- *   1. authenticate()  -> autentica l'utente || register() -> registra nuovo utente
+ *   1. authenticate()  -> autentica l'utente
  *   2. lobby           -> aspetta che tutti i giocatori siano pronti
  *   3. gaming()        -> ciclo di gioco
  *   4. writeScore()    -> salva il risultato su score.txt
@@ -753,10 +753,10 @@ int main() {
     /* azzera i file di stato all'avvio: ogni sessione parte da zero */
     close(open("score.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644));
 
-    /* apre il log globale: tutti i thread scriveranno qui tramite gLogFd */
+    /* apre il log globale (troncato): tutti i thread scriveranno qui tramite gLogFd */
     gLogFd = open("filelog.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (gLogFd < 0) {
-        //log non disponibile
+        /* unico caso in cui siamo costretti ad usare stderr: il log non e' disponibile */
         const char *err = "FATAL: impossibile aprire filelog.txt\n";
         write(STDERR_FILENO, err, strlen(err));
         exit(1);
