@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  game-server:
+    build: .
+    image: ubuntu-game:latest
+    container_name: server_container
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount dei file per persistenza e log
+      - ./users.txt:/app/users.txt
+      - ./score.txt:/app/score.txt
+      - ./filelog.txt:/app/filelog.txt
+    # Il server svuota score.txt ogni volta che parte (O_TRUNC nel C)
+    restart: "no"
+
+networks:
+  default:
+    name: game-net

@@ -1,3 +1,6 @@
 zio;fauente
 pasquale;capitone
 mimmo;modem
+ben;boy
+kekko;bomba
+daniele;megna

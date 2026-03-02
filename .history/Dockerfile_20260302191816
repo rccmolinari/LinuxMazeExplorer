@@ -1,0 +1,28 @@
+# ── stage 1: build ──────────────────────────────────────────────────────────
+FROM ubuntu:24.04 AS builder
+
+RUN apt-get update && apt-get install -y \
+        gcc \
+        make \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+
+RUN gcc -Wall -pthread -o server server.c map.c -lpthread && \
+    gcc -Wall -pthread -o client client.c map.c -lpthread
+
+# ── stage 2: runtime ────────────────────────────────────────────────────────
+FROM ubuntu:24.04
+
+RUN apt-get update && apt-get install -y \
+        gawk \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=builder /app/server .
+COPY --from=builder /app/client .
+
+VOLUME ["/app/data"]
+
+EXPOSE 8080

@@ -1,0 +1,37 @@
+# Stage 1: Compilazione
+FROM ubuntu:22.04 AS builder
+
+# Evita interazioni durante l'installazione dei pacchetti
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Installa il compilatore e le librerie necessarie
+RUN apt-get update && apt-get install -y \
+    gcc \
+    make \
+    libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+
+# Compilazione di Server e Client
+RUN gcc -Wall server.c map.c -o maze_server -lpthread
+RUN gcc -Wall client.c map.c -o maze_client -lpthread
+
+# Stage 2: Runtime
+FROM ubuntu:22.04
+
+WORKDIR /app
+
+# Copia gli eseguibili dallo stage builder
+COPY --from=builder /app/maze_server .
+COPY --from=builder /app/maze_client .
+
+# Crea i file di supporto necessari per il mount dei volumi
+RUN touch users.txt score.txt filelog.txt
+
+# Espone la porta del server
+EXPOSE 8080
+
+# Avvio del server
+CMD ["./maze_server"]

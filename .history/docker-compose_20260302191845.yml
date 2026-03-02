@@ -1,0 +1,21 @@
+services:        # i "container" che vuoi avviare
+
+  server:        # nome del service (è anche l'hostname nella rete)
+    build: .     # costruisce l'immagine dal Dockerfile nella cartella corrente
+    command: ./server          # cosa eseguire all'avvio
+    working_dir: /app/data     # cartella di lavoro dentro il container
+    ports:
+      - "8080:8080"  # host:container — espone la porta all'esterno
+    volumes:
+      - maze_data:/app/data    # monta il volume nella cartella
+
+  client:
+    build: .
+    command: ./client server 8080  # "server" è l'hostname del service sopra
+    stdin_open: true   # tiene aperto stdin (come -i di docker run)
+    tty: true          # alloca un terminale (come -t di docker run)
+    depends_on:
+      - server         # aspetta che server parta prima
+
+volumes:         # dichiara i volumi nominati usati sopra
+  maze_data:

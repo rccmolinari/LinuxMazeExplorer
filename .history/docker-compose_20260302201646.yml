@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  game-server:
+    build: .
+    image: traccialso:latest
+    container_name: server_container
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./users.txt:/app/users.txt
+      - ./score.txt:/app/score.txt
+      - ./filelog.txt:/app/filelog.txt
+    command: ./server
+    restart: "no"

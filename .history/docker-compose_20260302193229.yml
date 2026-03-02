@@ -1,0 +1,21 @@
+services:
+  server:
+    build: .
+    command: /app/server
+    working_dir: /app/data
+    ports:
+      - "8080:8080"
+    volumes:
+      - maze_data:/app/data
+
+  client:
+    build: .
+    command: /app/client server 8080
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    depends_on:
+      - server
+
+volumes:
+  maze_data:

@@ -281,7 +281,7 @@ void *asyncSendBlurredMap(void *arg) {
         pthread_mutex_lock(&(d->socketWriteMutex));
         sendBlurredMap(d->user, d->map, d->width, d->height, d->x, d->y, d->visited);
         pthread_mutex_unlock(&(d->socketWriteMutex));
-        if(isTimeUp()) break;
+
         char blurlog[512];
         snprintf(blurlog, sizeof(blurlog), "[%s@%s] BLUR: mappa sfocata inviata", d->username, d->ip);
         log_event(blurlog);
