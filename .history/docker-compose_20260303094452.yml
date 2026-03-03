@@ -1,0 +1,37 @@
+version: '3.8'
+
+networks:
+  game-net:
+    driver: bridge
+
+services:
+  game-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: traccialso-server:latest
+    container_name: server_container
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./users.txt:/app/users.txt
+      - ./score.txt:/app/score.txt
+      - ./filelog.txt:/app/filelog.txt
+    networks:
+      - game-net
+    restart: "no"
+
+  game-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    image: traccialso-client:latest
+    container_name: client_container
+    depends_on:
+      - game-server
+    networks:
+      - game-net
+    stdin_open: true   # equivale a -i
+    tty: true          # equivale a -t
+    command: ["game-server", "8080"]
+    restart: "no"

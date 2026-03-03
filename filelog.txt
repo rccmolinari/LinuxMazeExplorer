@@ -1,45 +1,44 @@
-[2026-03-02 19:23:45] SERVER: avvio in corso
-[2026-03-02 19:23:45] SERVER: in ascolto sulla porta 8080
-[2026-03-02 19:23:46] SERVER: connessione accettata da 172.19.0.1 (client #1)
-[2026-03-02 19:23:49] [daniele@172.19.0.1] AUTH: login avvenuto con successo
-[2026-03-02 19:23:49] [daniele@172.19.0.1] LOBBY: in attesa (1/1)
-[2026-03-02 19:23:49] LOBBY: tutti i giocatori pronti, partita in avvio
-[2026-03-02 19:23:49] [daniele@172.19.0.1] LOBBY: partita avviata, inizio gioco
-[2026-03-02 19:23:49] TIMER: countdown avviato
-[2026-03-02 19:23:49] [daniele@172.19.0.1] GAME: spawn assegnato in (2,1)
-[2026-03-02 19:23:49] [daniele@172.19.0.1] GAME: mappa iniziale inviata, attesa comandi
-[2026-03-02 19:23:50] [daniele@172.19.0.1] MOVE: 'D' (pos: 2,1)
-[2026-03-02 19:23:50] [daniele@172.19.0.1] MOVE: movimento bloccato (muro)
-[2026-03-02 19:23:50] [daniele@172.19.0.1] MOVE: 'A' (pos: 2,1)
-[2026-03-02 19:23:50] [daniele@172.19.0.1] MOVE: movimento bloccato (muro)
-[2026-03-02 19:23:50] [daniele@172.19.0.1] MOVE: 'A' (pos: 2,1)
-[2026-03-02 19:23:50] [daniele@172.19.0.1] MOVE: movimento bloccato (muro)
-[2026-03-02 19:23:51] [daniele@172.19.0.1] MOVE: 'D' (pos: 2,1)
-[2026-03-02 19:23:51] [daniele@172.19.0.1] MOVE: movimento bloccato (muro)
-[2026-03-02 19:23:51] [daniele@172.19.0.1] MOVE: 'D' (pos: 2,1)
-[2026-03-02 19:23:51] [daniele@172.19.0.1] MOVE: movimento bloccato (muro)
-[2026-03-02 19:23:53] [daniele@172.19.0.1] GAME: invio lista utenti
-[2026-03-02 19:23:53] [daniele@172.19.0.1] MOVE: 'D' (pos: 2,1)
-[2026-03-02 19:23:53] [daniele@172.19.0.1] MOVE: movimento bloccato (muro)
-[2026-03-02 19:23:54] [daniele@172.19.0.1] MOVE: 'A' (pos: 2,1)
-[2026-03-02 19:23:54] [daniele@172.19.0.1] MOVE: movimento bloccato (muro)
-[2026-03-02 19:23:59] [daniele@172.19.0.1] BLUR: mappa sfocata inviata
-[2026-03-02 19:24:03] [daniele@172.19.0.1] MOVE: 'W' (pos: 2,1)
-[2026-03-02 19:24:03] [daniele@172.19.0.1] MOVE: nuova pos (1,1)
-[2026-03-02 19:24:04] [daniele@172.19.0.1] MOVE: 'S' (pos: 1,1)
-[2026-03-02 19:24:04] [daniele@172.19.0.1] MOVE: nuova pos (2,1)
-[2026-03-02 19:24:05] [daniele@172.19.0.1] MOVE: 'W' (pos: 2,1)
-[2026-03-02 19:24:05] [daniele@172.19.0.1] MOVE: nuova pos (1,1)
-[2026-03-02 19:24:05] [daniele@172.19.0.1] MOVE: 'W' (pos: 1,1)
-[2026-03-02 19:24:05] [daniele@172.19.0.1] MOVE: nuova pos (0,1)
-[2026-03-02 19:24:06] [daniele@172.19.0.1] MOVE: 'W' (pos: 0,1)
-[2026-03-02 19:24:06] [daniele@172.19.0.1] GAME: uscita dalla mappa trovata
-[2026-03-02 19:24:06] [daniele@172.19.0.1] GAME: sessione terminata
-[2026-03-02 19:24:06] [daniele@172.19.0.1] SCORE: oggetti=0 exit=1
-[2026-03-02 19:24:06] [daniele@172.19.0.1] ENDGAME: partita terminata (0 ancora in gioco)
-[2026-03-02 19:24:06] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
-[2026-03-02 19:24:06] ENDGAME: vincitore -> 'daniele'
-[2026-03-02 19:24:06] [daniele@172.19.0.1] RESULT: vincitore
-[2026-03-02 19:24:06] [172.19.0.1@daniele] CLEANUP: connessione chiusa (authOk=1)
-[2026-03-02 19:24:06] SERVER: segnale di chiusura ricevuto, arresto in corso
-[2026-03-02 19:24:06] SERVER: socket chiuso, processo terminato
+[2026-03-03 08:59:41] SERVER: avvio in corso
+[2026-03-03 08:59:41] SERVER: in ascolto sulla porta 8080
+[2026-03-03 08:59:46] SERVER: connessione accettata da 172.19.0.1 (client #1)
+[2026-03-03 08:59:50] SERVER: connessione accettata da 172.19.0.1 (client #2)
+[2026-03-03 08:59:54] [marco@172.19.0.1] AUTH: registrazione avvenuta con successo
+[2026-03-03 08:59:58] [kekko@172.19.0.1] AUTH: login avvenuto con successo
+[2026-03-03 08:59:58] [kekko@172.19.0.1] LOBBY: in attesa (1/2)
+[2026-03-03 09:00:01] [marco@172.19.0.1] AUTH: login avvenuto con successo dopo registrazione
+[2026-03-03 09:00:01] [marco@172.19.0.1] LOBBY: in attesa (2/2)
+[2026-03-03 09:00:01] LOBBY: tutti i giocatori pronti, partita in avvio
+[2026-03-03 09:00:01] [marco@172.19.0.1] LOBBY: partita avviata, inizio gioco
+[2026-03-03 09:00:01] [kekko@172.19.0.1] LOBBY: partita avviata, inizio gioco
+[2026-03-03 09:00:01] [kekko@172.19.0.1] GAME: spawn assegnato in (1,0)
+[2026-03-03 09:00:01] [kekko@172.19.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-03-03 09:00:01] TIMER: countdown avviato
+[2026-03-03 09:00:01] [marco@172.19.0.1] GAME: spawn assegnato in (2,1)
+[2026-03-03 09:00:01] [marco@172.19.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-03-03 09:00:02] [marco@172.19.0.1] MOVE: 'W' (pos: 2,1)
+[2026-03-03 09:00:02] [marco@172.19.0.1] ITEM: raccolto in (1,1), totale=1
+[2026-03-03 09:00:02] [marco@172.19.0.1] MOVE: nuova pos (1,1)
+[2026-03-03 09:00:03] [marco@172.19.0.1] MOVE: 'W' (pos: 1,1)
+[2026-03-03 09:00:03] [marco@172.19.0.1] MOVE: nuova pos (0,1)
+[2026-03-03 09:00:03] [marco@172.19.0.1] MOVE: 'W' (pos: 0,1)
+[2026-03-03 09:00:03] [marco@172.19.0.1] GAME: uscita dalla mappa trovata
+[2026-03-03 09:00:03] [marco@172.19.0.1] GAME: sessione terminata
+[2026-03-03 09:00:03] [marco@172.19.0.1] SCORE: oggetti=1 exit=1
+[2026-03-03 09:00:03] [marco@172.19.0.1] ENDGAME: partita terminata (1 ancora in gioco)
+[2026-03-03 09:00:06] [kekko@172.19.0.1] MOVE: 'D' (pos: 1,0)
+[2026-03-03 09:00:06] [kekko@172.19.0.1] MOVE: nuova pos (1,1)
+[2026-03-03 09:00:06] [kekko@172.19.0.1] MOVE: 'D' (pos: 1,1)
+[2026-03-03 09:00:06] [kekko@172.19.0.1] MOVE: nuova pos (1,2)
+[2026-03-03 09:00:06] [kekko@172.19.0.1] MOVE: 'D' (pos: 1,2)
+[2026-03-03 09:00:06] [kekko@172.19.0.1] GAME: uscita dalla mappa trovata
+[2026-03-03 09:00:06] [kekko@172.19.0.1] GAME: sessione terminata
+[2026-03-03 09:00:06] [kekko@172.19.0.1] SCORE: oggetti=0 exit=1
+[2026-03-03 09:00:06] [kekko@172.19.0.1] ENDGAME: partita terminata (0 ancora in gioco)
+[2026-03-03 09:00:06] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
+[2026-03-03 09:00:06] ENDGAME: vincitore -> 'marco'
+[2026-03-03 09:00:06] [kekko@172.19.0.1] RESULT: sconfitto
+[2026-03-03 09:00:06] [marco@172.19.0.1] RESULT: vincitore
+[2026-03-03 09:00:06] [172.19.0.1@marco] CLEANUP: connessione chiusa (authOk=1)
+[2026-03-03 09:00:07] [172.19.0.1@kekko] CLEANUP: connessione chiusa (authOk=1)
+[2026-03-03 09:00:07] SERVER: segnale di chiusura ricevuto, arresto in corso
+[2026-03-03 09:00:07] SERVER: socket chiuso, processo terminato

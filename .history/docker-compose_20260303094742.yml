@@ -1,5 +1,9 @@
 version: '3.8'
 
+networks:
+  game-net:
+    driver: bridge
+
 services:
   game-server:
     build:
@@ -13,4 +17,6 @@ services:
       - ./users.txt:/app/users.txt
       - ./score.txt:/app/score.txt
       - ./filelog.txt:/app/filelog.txt
+    networks:
+      - game-net
     restart: "no"

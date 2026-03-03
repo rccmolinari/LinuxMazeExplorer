@@ -2,10 +2,8 @@ version: '3.8'
 
 services:
   game-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: traccialso-server:latest
+    build: .
+    image: traccialso:latest
     container_name: server_container
     ports:
       - "8080:8080"
@@ -13,4 +11,5 @@ services:
       - ./users.txt:/app/users.txt
       - ./score.txt:/app/score.txt
       - ./filelog.txt:/app/filelog.txt
+    command: ./server
     restart: "no"

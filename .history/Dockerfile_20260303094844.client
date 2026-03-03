@@ -1,0 +1,24 @@
+# Stage 1: Compilazione
+FROM ubuntu:22.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libc6-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY . .
+
+RUN gcc -Wall client.c map.c -o client -lpthread
+
+# Stage 2: Runtime
+FROM ubuntu:22.04
+
+WORKDIR /app
+
+COPY --from=builder /app/client .
+
+# Nessun ENTRYPOINT fisso: il comando viene passato dal docker-compose
+# con le variabili SERVER_HOST e SERVER_PORT
