@@ -190,7 +190,7 @@ void *silentWaitBlurredMap(void *arg) {
             }
             fflush(stdout);
             send(args->sockfd, "x", 1, 0); // notifica al server che abbiamo ricevuto il risultato
-            sleep(1); 
+            sleep(1); // breve pausa per assicurarsi che il messaggio arrivi prima di chiudere il socket
             kill(getpid(), SIGUSR1); 
             close(args->sockfd);
             break;

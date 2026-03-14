@@ -190,7 +190,6 @@ void *silentWaitBlurredMap(void *arg) {
             }
             fflush(stdout);
             send(args->sockfd, "x", 1, 0); // notifica al server che abbiamo ricevuto il risultato
-            sleep(1); 
             kill(getpid(), SIGUSR1); 
             close(args->sockfd);
             break;
@@ -358,20 +357,26 @@ int main(int argc, char* argv[]) {
         pthread_mutex_lock(&socketMutex);
         sendCommand(sockfd, command);   
         if(strcmp(command, "list") != 0) {     
-            char response[16];
+            char response[1];
             int n = recv(sockfd, response, 1, MSG_PEEK);
             
             if(n > 0) {
-                response[n] = '\0';
-                if(response[0] == 'M' || response[0] == 'E') {
+                if(response[0] == 'E') {
+                    /* 'E' arriva solo se il giocatore ha trovato l'uscita (msg 'M' già
+                     * ricevuto) e tutti hanno finito: lascia gestire TUTTO al thread */
+                    pthread_mutex_unlock(&socketMutex);
+                    break;
+                }
+                if(response[0] == 'M') {
+                    /* il thread gestirà 'M': sblocca il mutex e aspetta */
                     pthread_mutex_unlock(&socketMutex);
                     break;
                 }
                 char **new_map = receiveMap(sockfd, &width, &height, &x, &y, &effectiveRows, &effectiveCols);
                 if(new_map != NULL) {
-                    freeMap(map, currentMapRows); // usa le righe della map precedente
+                    freeMap(map, currentMapRows);
                     map = new_map;
-                    currentMapRows = effectiveRows; // aggiorna con le righe della nuova map
+                    currentMapRows = effectiveRows;
                 }
             }
             pthread_mutex_unlock(&socketMutex);

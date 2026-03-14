@@ -1,10 +1,10 @@
 #ifndef MAP_H
 #define MAP_H
 
-#define MAXWIDTHMAP 10
-#define MINWIDTHMAP 10
-#define MAXHEIGHTMAP 10
-#define MINHEIGHTMAP 10
+#define MAXWIDTHMAP 9
+#define MINWIDTHMAP 9
+#define MAXHEIGHTMAP 9
+#define MINHEIGHTMAP 9
 #define WALL '#'
 #define PATH ' '
 #define ITEM '+'

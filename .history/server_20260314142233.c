@@ -714,7 +714,13 @@ void *newUser(void *arg) {
             log_event(logmsg);
             send(d->user, "L", 1, 0);
         }
+        /* timeout sull'ack: se il client non risponde entro 3s si va avanti comunque */
+        struct timeval tv = {3, 0};
+        setsockopt(d->user, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         recv(d->user, &closeM, 1, 0);
+        /* ripristina timeout infinito (non strettamente necessario ma buona pratica) */
+        tv.tv_sec = 0;
+        setsockopt(d->user, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     }
 
     /* ----- CLEANUP ----- */

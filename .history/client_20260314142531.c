@@ -185,12 +185,11 @@ void *silentWaitBlurredMap(void *arg) {
             } else if(n > 0 && wol[0] == 'L') {
                 printf("\n======================================\n");
                 printf("           SCONFITTA\n");
-                printf("  Andrà meglio la prossima volta...\n");
+                printf("  Andrà Meglio la prossima volta...\n");
                 printf("======================================\n\n");
             }
             fflush(stdout);
             send(args->sockfd, "x", 1, 0); // notifica al server che abbiamo ricevuto il risultato
-            sleep(1); 
             kill(getpid(), SIGUSR1); 
             close(args->sockfd);
             break;

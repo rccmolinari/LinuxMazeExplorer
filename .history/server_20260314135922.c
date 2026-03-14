@@ -154,7 +154,7 @@ void sendUserList(struct data * d) {
 
     struct userNode *current = userList.head;
     while (current) {
-        /* invia la lunghezza dello username seguita dallo username */
+        /* invia la lunghezza dello username (1 byte) seguita dallo username */
         int len = strlen(current->username);
         send(d->user, &len, sizeof(len), 0);
         send(d->user, current->username, len, 0);
@@ -389,6 +389,7 @@ int registration(struct data *d) {
     return 0;
 }
 
+/* Lettura thread-safe di timeUp */
 /* --------------------------------------------------------------------------
  * authenticate
  *
@@ -494,7 +495,7 @@ void gaming(struct data *d) {
             snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: invio lista utenti", d->username, d->ip);
             log_event(logmsg);
             sendUserList(d);
-            continue; 
+            continue; // non eseguire il codice di movimento né sendAdjacentMap
         }
 
         snprintf(logmsg, sizeof(logmsg),
