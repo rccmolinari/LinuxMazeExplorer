@@ -129,7 +129,7 @@ void sendCommand(int sockfd, const char * command) {
 /* Gestore SIGUSR1: inviato dal thread al processo principale per forzarne
  * la terminazione dopo aver stampato il risultato finale. */
 void handler(int signum) {
-    exit(0);
+    terminate = 1;
 }
 
 /* --------------------------------------------------------------------------
@@ -384,7 +384,7 @@ int main(int argc, char* argv[]) {
     }
     
     /* attende che il thread completi la notifica del risultato finale */
-    while(1) {
+    while(!terminate) {
         sleep(1);
     }
     freeMap(map, effectiveRows);

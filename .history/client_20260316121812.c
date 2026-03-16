@@ -384,7 +384,7 @@ int main(int argc, char* argv[]) {
     }
     
     /* attende che il thread completi la notifica del risultato finale */
-    while(1) {
+    while(!terminate) {
         sleep(1);
     }
     freeMap(map, effectiveRows);
