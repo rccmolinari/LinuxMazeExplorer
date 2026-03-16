@@ -1,8 +1,7 @@
 zio;fauente
-pasquale;capitone
 mimmo;modem
 ben;boy
 kekko;bomba
+rocco;molinari
 daniele;megna
 marco;mas
-fauente;boss

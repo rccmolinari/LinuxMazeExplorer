@@ -1,114 +1,34 @@
-[2026-03-14 13:27:55] SERVER: avvio in corso
-[2026-03-14 13:27:55] SERVER: in ascolto sulla porta 8080
-[2026-03-14 13:27:57] SERVER: connessione accettata da 172.18.0.1 (client #1)
-[2026-03-14 13:28:00] SERVER: connessione accettata da 172.18.0.1 (client #2)
-[2026-03-14 13:28:01] [ZIO@172.18.0.1] AUTH: utente non trovato durante login
-[2026-03-14 13:28:01] [172.18.0.1@ZIO] CLEANUP: connessione chiusa (authOk=0)
-[2026-03-14 13:28:03] SERVER: connessione accettata da 172.18.0.1 (client #2)
-[2026-03-14 13:28:05] [zio@172.18.0.1] AUTH: login avvenuto con successo
-[2026-03-14 13:28:05] [zio@172.18.0.1] LOBBY: in attesa (1/2)
-[2026-03-14 13:28:08] [daniele@172.18.0.1] AUTH: login avvenuto con successo
-[2026-03-14 13:28:08] [daniele@172.18.0.1] LOBBY: in attesa (2/2)
-[2026-03-14 13:28:08] LOBBY: tutti i giocatori pronti, partita in avvio
-[2026-03-14 13:28:08] [daniele@172.18.0.1] LOBBY: partita avviata, inizio gioco
-[2026-03-14 13:28:08] [zio@172.18.0.1] LOBBY: partita avviata, inizio gioco
-[2026-03-14 13:28:08] [daniele@172.18.0.1] GAME: spawn assegnato in (7,6)
-[2026-03-14 13:28:08] [zio@172.18.0.1] GAME: spawn assegnato in (4,9)
-[2026-03-14 13:28:08] [daniele@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
-[2026-03-14 13:28:08] [zio@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
-[2026-03-14 13:28:08] TIMER: countdown avviato
-[2026-03-14 13:28:08] [daniele@172.18.0.1] MOVE: 'D' (pos: 7,6)
-[2026-03-14 13:28:08] [daniele@172.18.0.1] MOVE: nuova pos (7,7)
-[2026-03-14 13:28:09] [daniele@172.18.0.1] MOVE: 'A' (pos: 7,7)
-[2026-03-14 13:28:09] [daniele@172.18.0.1] MOVE: nuova pos (7,6)
-[2026-03-14 13:28:09] [daniele@172.18.0.1] MOVE: 'A' (pos: 7,6)
-[2026-03-14 13:28:09] [daniele@172.18.0.1] MOVE: nuova pos (7,5)
-[2026-03-14 13:28:09] [daniele@172.18.0.1] MOVE: 'A' (pos: 7,5)
-[2026-03-14 13:28:09] [daniele@172.18.0.1] MOVE: nuova pos (7,4)
-[2026-03-14 13:28:10] [daniele@172.18.0.1] MOVE: 'A' (pos: 7,4)
-[2026-03-14 13:28:10] [daniele@172.18.0.1] MOVE: nuova pos (7,3)
-[2026-03-14 13:28:10] [daniele@172.18.0.1] MOVE: 'W' (pos: 7,3)
-[2026-03-14 13:28:10] [daniele@172.18.0.1] MOVE: nuova pos (6,3)
-[2026-03-14 13:28:10] [daniele@172.18.0.1] MOVE: 'W' (pos: 6,3)
-[2026-03-14 13:28:10] [daniele@172.18.0.1] MOVE: nuova pos (5,3)
-[2026-03-14 13:28:11] [daniele@172.18.0.1] MOVE: 'W' (pos: 5,3)
-[2026-03-14 13:28:11] [daniele@172.18.0.1] MOVE: nuova pos (4,3)
-[2026-03-14 13:28:11] [daniele@172.18.0.1] MOVE: 'W' (pos: 4,3)
-[2026-03-14 13:28:11] [daniele@172.18.0.1] MOVE: nuova pos (3,3)
-[2026-03-14 13:28:12] [daniele@172.18.0.1] MOVE: 'D' (pos: 3,3)
-[2026-03-14 13:28:12] [daniele@172.18.0.1] MOVE: nuova pos (3,4)
-[2026-03-14 13:28:12] [daniele@172.18.0.1] MOVE: 'D' (pos: 3,4)
-[2026-03-14 13:28:12] [daniele@172.18.0.1] ITEM: raccolto in (3,5), totale=1
-[2026-03-14 13:28:12] [daniele@172.18.0.1] MOVE: nuova pos (3,5)
-[2026-03-14 13:28:12] [daniele@172.18.0.1] MOVE: 'D' (pos: 3,5)
-[2026-03-14 13:28:12] [daniele@172.18.0.1] MOVE: nuova pos (3,6)
-[2026-03-14 13:28:13] [daniele@172.18.0.1] MOVE: 'D' (pos: 3,6)
-[2026-03-14 13:28:13] [daniele@172.18.0.1] MOVE: nuova pos (3,7)
-[2026-03-14 13:28:13] [daniele@172.18.0.1] MOVE: 'D' (pos: 3,7)
-[2026-03-14 13:28:13] [daniele@172.18.0.1] MOVE: movimento bloccato (muro)
-[2026-03-14 13:28:14] [daniele@172.18.0.1] MOVE: 'A' (pos: 3,7)
-[2026-03-14 13:28:14] [daniele@172.18.0.1] MOVE: nuova pos (3,6)
-[2026-03-14 13:28:14] [daniele@172.18.0.1] MOVE: 'A' (pos: 3,6)
-[2026-03-14 13:28:14] [daniele@172.18.0.1] MOVE: nuova pos (3,5)
-[2026-03-14 13:28:14] [daniele@172.18.0.1] MOVE: 'A' (pos: 3,5)
-[2026-03-14 13:28:14] [daniele@172.18.0.1] MOVE: nuova pos (3,4)
-[2026-03-14 13:28:14] [daniele@172.18.0.1] MOVE: 'A' (pos: 3,4)
-[2026-03-14 13:28:14] [daniele@172.18.0.1] MOVE: nuova pos (3,3)
-[2026-03-14 13:28:15] [daniele@172.18.0.1] MOVE: 'S' (pos: 3,3)
-[2026-03-14 13:28:15] [daniele@172.18.0.1] MOVE: nuova pos (4,3)
-[2026-03-14 13:28:15] [daniele@172.18.0.1] MOVE: 'S' (pos: 4,3)
-[2026-03-14 13:28:15] [daniele@172.18.0.1] MOVE: nuova pos (5,3)
-[2026-03-14 13:28:15] [daniele@172.18.0.1] MOVE: 'A' (pos: 5,3)
-[2026-03-14 13:28:15] [daniele@172.18.0.1] MOVE: nuova pos (5,2)
-[2026-03-14 13:28:15] [daniele@172.18.0.1] MOVE: 'A' (pos: 5,2)
-[2026-03-14 13:28:15] [daniele@172.18.0.1] MOVE: nuova pos (5,1)
-[2026-03-14 13:28:16] [daniele@172.18.0.1] MOVE: 'W' (pos: 5,1)
-[2026-03-14 13:28:16] [daniele@172.18.0.1] MOVE: nuova pos (4,1)
-[2026-03-14 13:28:16] [daniele@172.18.0.1] MOVE: 'W' (pos: 4,1)
-[2026-03-14 13:28:16] [daniele@172.18.0.1] MOVE: nuova pos (3,1)
-[2026-03-14 13:28:16] [daniele@172.18.0.1] MOVE: 'W' (pos: 3,1)
-[2026-03-14 13:28:16] [daniele@172.18.0.1] MOVE: nuova pos (2,1)
-[2026-03-14 13:28:17] [daniele@172.18.0.1] MOVE: 'W' (pos: 2,1)
-[2026-03-14 13:28:17] [daniele@172.18.0.1] MOVE: nuova pos (1,1)
-[2026-03-14 13:28:17] [daniele@172.18.0.1] MOVE: 'D' (pos: 1,1)
-[2026-03-14 13:28:17] [daniele@172.18.0.1] MOVE: nuova pos (1,2)
-[2026-03-14 13:28:17] [daniele@172.18.0.1] MOVE: 'DD' (pos: 1,2)
-[2026-03-14 13:28:17] [daniele@172.18.0.1] MOVE: nuova pos (1,2)
-[2026-03-14 13:28:18] [zio@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-03-14 13:28:18] [daniele@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-03-14 13:28:19] [daniele@172.18.0.1] MOVE: 'D' (pos: 1,2)
-[2026-03-14 13:28:19] [daniele@172.18.0.1] MOVE: nuova pos (1,3)
-[2026-03-14 13:28:19] [daniele@172.18.0.1] MOVE: 'D' (pos: 1,3)
-[2026-03-14 13:28:19] [daniele@172.18.0.1] MOVE: nuova pos (1,4)
-[2026-03-14 13:28:20] [daniele@172.18.0.1] MOVE: 'D' (pos: 1,4)
-[2026-03-14 13:28:20] [daniele@172.18.0.1] MOVE: nuova pos (1,5)
-[2026-03-14 13:28:20] [daniele@172.18.0.1] MOVE: 'D' (pos: 1,5)
-[2026-03-14 13:28:20] [daniele@172.18.0.1] MOVE: nuova pos (1,6)
-[2026-03-14 13:28:20] [daniele@172.18.0.1] MOVE: 'D' (pos: 1,6)
-[2026-03-14 13:28:20] [daniele@172.18.0.1] MOVE: nuova pos (1,7)
-[2026-03-14 13:28:20] [daniele@172.18.0.1] MOVE: 'D' (pos: 1,7)
-[2026-03-14 13:28:20] [daniele@172.18.0.1] MOVE: nuova pos (1,8)
-[2026-03-14 13:28:21] [daniele@172.18.0.1] MOVE: 'W' (pos: 1,8)
-[2026-03-14 13:28:21] [daniele@172.18.0.1] MOVE: nuova pos (0,8)
-[2026-03-14 13:28:21] [daniele@172.18.0.1] MOVE: 'W' (pos: 0,8)
-[2026-03-14 13:28:21] [daniele@172.18.0.1] GAME: uscita dalla mappa trovata
-[2026-03-14 13:28:21] [daniele@172.18.0.1] GAME: sessione terminata
-[2026-03-14 13:28:21] [daniele@172.18.0.1] SCORE: oggetti=1 exit=1
-[2026-03-14 13:28:21] [daniele@172.18.0.1] ENDGAME: partita terminata (1 ancora in gioco)
-[2026-03-14 13:28:24] [zio@172.18.0.1] MOVE: 'S' (pos: 4,9)
-[2026-03-14 13:28:24] [zio@172.18.0.1] MOVE: nuova pos (5,9)
-[2026-03-14 13:28:24] [zio@172.18.0.1] MOVE: 'D' (pos: 5,9)
-[2026-03-14 13:28:24] [zio@172.18.0.1] MOVE: nuova pos (5,10)
-[2026-03-14 13:28:24] [zio@172.18.0.1] MOVE: 'D' (pos: 5,10)
-[2026-03-14 13:28:24] [zio@172.18.0.1] GAME: uscita dalla mappa trovata
-[2026-03-14 13:28:24] [zio@172.18.0.1] GAME: sessione terminata
-[2026-03-14 13:28:24] [zio@172.18.0.1] SCORE: oggetti=0 exit=1
-[2026-03-14 13:28:24] [zio@172.18.0.1] ENDGAME: partita terminata (0 ancora in gioco)
-[2026-03-14 13:28:24] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
-[2026-03-14 13:28:24] ENDGAME: vincitore -> 'daniele'
-[2026-03-14 13:28:24] [zio@172.18.0.1] RESULT: sconfitto
-[2026-03-14 13:28:24] [daniele@172.18.0.1] RESULT: vincitore
-[2026-03-14 13:28:24] [172.18.0.1@daniele] CLEANUP: connessione chiusa (authOk=1)
-[2026-03-14 13:28:24] [172.18.0.1@zio] CLEANUP: connessione chiusa (authOk=1)
-[2026-03-14 13:28:24] SERVER: segnale di chiusura ricevuto, arresto in corso
-[2026-03-14 13:28:24] SERVER: socket chiuso, processo terminato
+[2026-03-16 11:09:33] SERVER: avvio in corso
+[2026-03-16 11:09:33] SERVER: in ascolto sulla porta 8080
+[2026-03-16 11:09:47] SERVER: connessione accettata da 172.18.0.1 (client #1)
+[2026-03-16 11:09:49] SERVER: connessione accettata da 172.18.0.1 (client #2)
+[2026-03-16 11:09:51] [zio@172.18.0.1] AUTH: login avvenuto con successo
+[2026-03-16 11:09:51] [zio@172.18.0.1] LOBBY: in attesa (1/2)
+[2026-03-16 11:09:53] [fauente@172.18.0.1] AUTH: login avvenuto con successo
+[2026-03-16 11:09:53] [fauente@172.18.0.1] LOBBY: in attesa (2/2)
+[2026-03-16 11:09:53] LOBBY: tutti i giocatori pronti, partita in avvio
+[2026-03-16 11:09:53] [fauente@172.18.0.1] LOBBY: partita avviata, inizio gioco
+[2026-03-16 11:09:53] TIMER: countdown avviato
+[2026-03-16 11:09:53] [zio@172.18.0.1] LOBBY: partita avviata, inizio gioco
+[2026-03-16 11:09:53] [zio@172.18.0.1] GAME: spawn assegnato in (1,2)
+[2026-03-16 11:09:53] [fauente@172.18.0.1] GAME: spawn assegnato in (1,2)
+[2026-03-16 11:09:53] [fauente@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-03-16 11:09:53] [zio@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-03-16 11:09:54] [fauente@172.18.0.1] MOVE: 'D' (pos: 1,2)
+[2026-03-16 11:09:54] [fauente@172.18.0.1] GAME: uscita dalla mappa trovata
+[2026-03-16 11:09:54] [fauente@172.18.0.1] GAME: sessione terminata
+[2026-03-16 11:09:54] [fauente@172.18.0.1] SCORE: oggetti=0 exit=1
+[2026-03-16 11:09:54] [fauente@172.18.0.1] ENDGAME: partita terminata (1 ancora in gioco)
+[2026-03-16 11:09:56] [zio@172.18.0.1] MOVE: 'D' (pos: 1,2)
+[2026-03-16 11:09:56] [zio@172.18.0.1] GAME: uscita dalla mappa trovata
+[2026-03-16 11:09:56] [zio@172.18.0.1] GAME: sessione terminata
+[2026-03-16 11:09:56] [zio@172.18.0.1] SCORE: oggetti=0 exit=1
+[2026-03-16 11:09:56] [zio@172.18.0.1] ENDGAME: partita terminata (0 ancora in gioco)
+[2026-03-16 11:09:56] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
+[2026-03-16 11:09:56] ENDGAME: vincitore -> 'fauente'
+[2026-03-16 11:09:56] [zio@172.18.0.1] RESULT: sconfitto
+[2026-03-16 11:09:56] [fauente@172.18.0.1] RESULT: vincitore
+[2026-03-16 11:09:56] [172.18.0.1@fauente] CLEANUP: connessione chiusa (authOk=1)
+[2026-03-16 11:09:56] [172.18.0.1@zio] CLEANUP: connessione chiusa (authOk=1)
+[2026-03-16 11:09:56] SERVER: segnale di chiusura ricevuto, arresto in corso
+[2026-03-16 11:09:56] SERVER: socket chiuso, processo terminato

@@ -229,7 +229,7 @@ void printWinnerWithPipe(char *winner) {
         close(fd[1]);
 
         execlp("sh", "sh", "-c",
-               "sort -s -k3,3nr -k2,2nr score.txt | head -n1 | awk '{print $1}'",
+               "sort -k3,3nr -k2,2nr score.txt | head -n1 | awk '{print $1}'",
                NULL);
         exit(1); /* raggiunto solo se execlp fallisce */
     } else {

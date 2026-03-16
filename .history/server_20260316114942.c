@@ -17,13 +17,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 5
+#define SECONDS_TO_BLUR 10
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 10
+#define TIMER 30
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -229,7 +229,7 @@ void printWinnerWithPipe(char *winner) {
         close(fd[1]);
 
         execlp("sh", "sh", "-c",
-               "sort -s -k3,3nr -k2,2nr score.txt | head -n1 | awk '{print $1}'",
+               "sort -k3,3nr -k2,2nr score.txt | head -n1 | awk '{print $1}'",
                NULL);
         exit(1); /* raggiunto solo se execlp fallisce */
     } else {
@@ -277,7 +277,7 @@ void *asyncSendBlurredMap(void *arg) {
     while (!isTimeUp() && !d->gameOver && !d->exitFlag) {
         sleep(SECONDS_TO_BLUR);
         if (d->user <= 0) break;
-        if(isTimeUp() || d->exitFlag || d->gameOver) break;
+        if(isTimeUp()) break;
         pthread_mutex_lock(&(d->socketWriteMutex));
         sendBlurredMap(d->user, d->map, d->width, d->height, d->x, d->y, d->visited);
         pthread_mutex_unlock(&(d->socketWriteMutex));
