@@ -65,9 +65,9 @@ static void printMapUI(char **map, int cols, int rows, int x, int y, const char 
     for (int i = 0; i < rows; i++) {
         printf("  |");
         for (int j = 0; j < cols; j++) {
-            //if (i == x && j == y)
-            //    putchar('X');
-            //else
+            if (i == x && j == y)
+                putchar('X');
+            else
                 putchar(map[i][j]);
         }
         printf("|\n");
@@ -160,11 +160,8 @@ void *silentWaitBlurredMap(void *arg) {
         }
         /* MSG_DONTWAIT impedisce al thread di bloccarsi se non c'e' nulla */
         int n = recv(args->sockfd, &type, sizeof(char), MSG_PEEK | MSG_DONTWAIT);
-        pthread_mutex_unlock(&socketMutex);
         if(n>0 && type == 'M') {
-            pthread_mutex_lock(&socketMutex);
             recv(args->sockfd, &type, sizeof(char), 0); // consuma 'M'
-            pthread_mutex_unlock(&socketMutex);
             printf("\n======================================\n");
             printf("  HAI RAGGIUNTO L'USCITA!\n");
             printf("  Attendi il risultato finale...\n");
@@ -178,10 +175,8 @@ void *silentWaitBlurredMap(void *arg) {
         if(n > 0 && type == 'E') {
             /* fine sessione: consuma 'E', leggi W o L e stampa il risultato */
             char wol[2];
-            pthread_mutex_lock(&socketMutex);
             recv(args->sockfd, &type, sizeof(char), 0);
             int n = recv(args->sockfd, wol, 1, 0);
-            pthread_mutex_unlock(&socketMutex);
             system("clear");
             if(n > 0 && wol[0] == 'W') {
                 printf("\n======================================\n");
@@ -203,9 +198,7 @@ void *silentWaitBlurredMap(void *arg) {
         }
         if (n > 0 && type == 'B') {
             int localRows, localCols;
-            pthread_mutex_lock(&socketMutex);
             char **blurredMap = receiveMap(args->sockfd, args->width, args->height, args->x, args->y, &localRows, &localCols);
-            pthread_mutex_unlock(&socketMutex);
             if (blurredMap && !end) {
                 /* aggiorna le dimensioni condivise col main */
                 *(args->effectiveRows) = localRows;
@@ -217,6 +210,8 @@ void *silentWaitBlurredMap(void *arg) {
                 freeMap(blurredMap, localRows); /* usa la copia locale, non il puntatore condiviso */
             }
         }
+        
+        pthread_mutex_unlock(&socketMutex);
         
         /* pausa breve per non saturare la CPU e cedere il passo al main */
         usleep(200000); 
@@ -256,17 +251,6 @@ int main(int argc, char* argv[]) {
     if (connect(sockfd, (struct sockaddr*)&srv, sizeof(srv)) < 0) {
         printf("Errore: impossibile connettersi a %s\n", argv[1]);
         return 1;
-    }
-    char c;
-    recv(sockfd, &c, 1, 0);
-
-    if(c == 'R') {
-        printf("Errore: il server ha rifiutato la connessione (partita gia' iniziata)\n");
-        close(sockfd);
-        return 1;
-    }
-    else if(c == 'A') {
-        printf("Connessione accettata dal server!\n");
     }
 
     system("clear");

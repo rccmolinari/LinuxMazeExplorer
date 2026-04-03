@@ -17,13 +17,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 6
+#define SECONDS_TO_BLUR 20
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 5
+#define TIMER 300
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -818,9 +818,7 @@ int main() {
 
         pthread_mutex_unlock(&endMutex);
 
-        struct timeval tv = { .tv_sec = 1, .tv_usec = 0 };
-
-        if (select(maxfd + 1, &rfds, NULL, NULL, &tv) < 0) {
+        if (select(maxfd + 1, &rfds, NULL, NULL, NULL) < 0) {
             log_error("select");
             break;
         }

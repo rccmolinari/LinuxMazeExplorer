@@ -257,17 +257,6 @@ int main(int argc, char* argv[]) {
         printf("Errore: impossibile connettersi a %s\n", argv[1]);
         return 1;
     }
-    char c;
-    recv(sockfd, &c, 1, 0);
-
-    if(c == 'R') {
-        printf("Errore: il server ha rifiutato la connessione (partita gia' iniziata)\n");
-        close(sockfd);
-        return 1;
-    }
-    else if(c == 'A') {
-        printf("Connessione accettata dal server!\n");
-    }
 
     system("clear");
     printf("\n======================================\n");

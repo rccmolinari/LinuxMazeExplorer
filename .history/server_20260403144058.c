@@ -17,13 +17,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 6
+#define SECONDS_TO_BLUR 10
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 5
+#define TIMER 30
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -49,8 +49,6 @@ char gWinner[256] = {0};
 int  gWinnerCalculated = 0;
 pthread_mutex_t gWinnerMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t  gWinnerCond  = PTHREAD_COND_INITIALIZER;
-pthread_mutex_t endMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t endCond = PTHREAD_COND_INITIALIZER;
 /* --------------------------------------------------------------------------
  * Stato globale del server
  * -------------------------------------------------------------------------- */
@@ -67,8 +65,7 @@ int nEnd = 0;
 int gLogFd = -1;
 
 /* pipe usata dai thread per svegliare la select() del main quando la partita finisce */
-int gameEnd = 0;
-
+int wakeup_pipe[2];
 
 pthread_t timerTid;
 
@@ -315,9 +312,7 @@ void writeScore(char *username, struct data *d) {
                            username, d->collectedItems, d->exitFlag);
         write(scoreFile, buffer, len);
         close(scoreFile);
-        scoreChanging = 0;
-        pthread_cond_signal(&scoreCond);
-        pthread_mutex_unlock(&scoreMutex);
+
         char logmsg[512];
         snprintf(logmsg, sizeof(logmsg), "[%s@%s] SCORE: oggetti=%d exit=%d",
                  username, d->ip, d->collectedItems, d->exitFlag);
@@ -326,6 +321,9 @@ void writeScore(char *username, struct data *d) {
         log_error("open score.txt in writeScore");
     }
 
+    scoreChanging = 0;
+    pthread_cond_signal(&scoreCond);
+    pthread_mutex_unlock(&scoreMutex);
 }
 
 /* --------------------------------------------------------------------------
@@ -453,6 +451,7 @@ void gaming(struct data *d) {
     d->collectedItems = 0;
     d->exitFlag = 0;
 
+    /* posizione di spawn casuale su una cella percorribile */
     do {
         d->x = rand() % d->height;
         d->y = rand() % d->width;
@@ -491,11 +490,11 @@ void gaming(struct data *d) {
             break;
         }
 
-        if (!strcmp(buffer, "list")) {
+        if(!strcmp(buffer, "list")) {
             snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: invio lista utenti", d->username, d->ip);
             log_event(logmsg);
             sendUserList(d);
-            continue;
+            continue; 
         }
 
         snprintf(logmsg, sizeof(logmsg),
@@ -506,6 +505,7 @@ void gaming(struct data *d) {
         int nextY = d->y;
         int win   = 0;
 
+        /* controlla se il giocatore esce dai bordi della mappa */
         if      (!strcmp(buffer, "W")) { if (d->x == 0)             win = 1; else nextX--; }
         else if (!strcmp(buffer, "S")) { if (d->x == d->height - 1) win = 1; else nextX++; }
         else if (!strcmp(buffer, "A")) { if (d->y == 0)             win = 1; else nextY--; }
@@ -516,46 +516,34 @@ void gaming(struct data *d) {
             snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: uscita dalla mappa trovata", d->username, d->ip);
             log_event(logmsg);
             pthread_mutex_lock(&(d->socketWriteMutex));
-            send(d->user, "M", 1, 0);
+            send(d->user, "M", 1, 0); /* M = Map exit */
             pthread_mutex_unlock(&(d->socketWriteMutex));
             break;
         }
 
-        /* --- sezione critica: modifica mappa condivisa --- */
-        int moved   = 0;
-        int gotItem = 0;
-
         pthread_mutex_lock(&mutex);
         if (d->map[nextX][nextY] != WALL) {
-            moved = 1;
             d->x = nextX;
             d->y = nextY;
             d->visited[d->x][d->y] = 1;
             adjVisit(d->width, d->height, d->x, d->y, d->visited);
 
             if (d->map[d->x][d->y] == ITEM) {
-                d->map[d->x][d->y] = PATH;
+                d->map[d->x][d->y] = PATH; /* l'item viene rimosso dalla mappa */
                 d->collectedItems++;
-                gotItem = 1;
+                snprintf(logmsg, sizeof(logmsg),
+                         "[%s@%s] ITEM: raccolto in (%d,%d), totale=%d", d->username, d->ip, d->x, d->y, d->collectedItems);
+                log_event(logmsg);
             }
-        }
-        pthread_mutex_unlock(&mutex); /* sempre eseguito, qualunque sia il caso */
 
-        if (gotItem) {
-            snprintf(logmsg, sizeof(logmsg),
-                     "[%s@%s] ITEM: raccolto in (%d,%d), totale=%d",
-                     d->username, d->ip, d->x, d->y, d->collectedItems);
-            log_event(logmsg);
-        }
-
-        if (moved) {
             snprintf(logmsg, sizeof(logmsg),
                      "[%s@%s] MOVE: nuova pos (%d,%d)", d->username, d->ip, d->x, d->y);
+            log_event(logmsg);
         } else {
-            snprintf(logmsg, sizeof(logmsg),
-                     "[%s@%s] MOVE: movimento bloccato (muro)", d->username, d->ip);
+            snprintf(logmsg, sizeof(logmsg), "[%s@%s] MOVE: movimento bloccato (muro)", d->username, d->ip);
+            log_event(logmsg);
         }
-        log_event(logmsg);
+        pthread_mutex_unlock(&mutex);
 
         pthread_mutex_lock(&(d->socketWriteMutex));
         sendAdjacentMap(d->user, d->map, d->width, d->height, d->x, d->y);
@@ -565,6 +553,7 @@ void gaming(struct data *d) {
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: sessione terminata", d->username, d->ip);
     log_event(logmsg);
 }
+
 /* --------------------------------------------------------------------------
  * newUser  [thread]
  *
@@ -736,9 +725,7 @@ void *newUser(void *arg) {
     pthread_mutex_lock(&lobbyMutex);
     nClients--;
     if (nClients == 0) {
-        pthread_mutex_lock(&endMutex);
-        gameEnd = 1;
-        pthread_mutex_unlock(&endMutex);
+        write(wakeup_pipe[1], "X", 1);
     }
     pthread_mutex_unlock(&lobbyMutex);
 
@@ -756,7 +743,7 @@ void *newUser(void *arg) {
  * Apre il log, azzera score.txt, crea il socket TCP sulla porta 8080 e
  * genera la mappa. Poi entra nel loop di select() che accetta nuovi client
  * finche' l'ultimo thread attivo non segnala la fine della partita
- * scrivendo la variabile globale
+ * scrivendo sulla wakeup_pipe.
  * -------------------------------------------------------------------------- */
 int main() {
     srand(time(NULL));
@@ -775,6 +762,11 @@ int main() {
     }
 
     log_event("SERVER: avvio in corso");
+
+    if (pipe(wakeup_pipe) == -1) {
+        log_error("pipe wakeup_pipe");
+        exit(1);
+    }
 
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -807,51 +799,35 @@ int main() {
         fd_set rfds;
         FD_ZERO(&rfds);
         FD_SET(sockfd, &rfds);
+        FD_SET(wakeup_pipe[0], &rfds);
 
-        int maxfd = sockfd;
+        int maxfd = (sockfd > wakeup_pipe[0]) ? sockfd : wakeup_pipe[0];
 
-        pthread_mutex_lock(&endMutex);
-        if (gameEnd) {
-            pthread_mutex_unlock(&endMutex);
-            break;
-        }
-
-        pthread_mutex_unlock(&endMutex);
-
-        struct timeval tv = { .tv_sec = 1, .tv_usec = 0 };
-
-        if (select(maxfd + 1, &rfds, NULL, NULL, &tv) < 0) {
+        if (select(maxfd + 1, &rfds, NULL, NULL, NULL) < 0) {
             log_error("select");
             break;
         }
+
+        /* segnale di fine partita dalla pipe: usciamo dal loop */
+        if (FD_ISSET(wakeup_pipe[0], &rfds)) {
+            char c;
+            read(wakeup_pipe[0], &c, 1);
+            log_event("SERVER: segnale di chiusura ricevuto, arresto in corso");
+            close(wakeup_pipe[0]);
+            break;
+        }
+
         /* nuova connessione TCP in arrivo */
         if (FD_ISSET(sockfd, &rfds)) {
-            pthread_mutex_lock(&lobbyMutex);
-            if (gameStarted) {
-                pthread_mutex_unlock(&lobbyMutex);   // unlock e scarta la connessione
-                struct sockaddr_in cli;
-                socklen_t clen = sizeof(cli);
-                int cfd = accept(sockfd, (struct sockaddr *)&cli, &clen);
-                if (cfd >= 0) {
-                    char logmsg[256];
-                    snprintf(logmsg, sizeof(logmsg),
-                             "SERVER: rifiutata connessione da %s (partita gia' iniziata)",
-                             inet_ntoa(cli.sin_addr));
-                    log_event(logmsg);
-                    send(cfd, "R", 1, 0);
-                    close(cfd);
-                }
-                continue;   // torna al loop, non break
-            }
-            pthread_mutex_unlock(&lobbyMutex);       // unlock prima di accept
-        
             struct sockaddr_in cli;
             socklen_t clen = sizeof(cli);
             int cfd = accept(sockfd, (struct sockaddr *)&cli, &clen);
-            if (cfd < 0) { log_error("accept"); continue; }
-        
-            send(cfd, "A", 1, 0);
-        
+            if (cfd < 0) {
+                log_error("accept");
+                continue;
+            }
+
+            /* alloca e inizializza la struttura dati del client */
             struct data *d = malloc(sizeof(struct data));
             d->user           = cfd;
             strncpy(d->ip, inet_ntoa(cli.sin_addr), INET_ADDRSTRLEN - 1);
@@ -862,20 +838,21 @@ int main() {
             d->collectedItems = 0;
             d->exitFlag       = 0;
             d->gameOver       = 0;
+
             pthread_mutex_init(&(d->socketWriteMutex), NULL);
-        
+
             d->visited = malloc(h * sizeof(int *));
             for (int i = 0; i < h; i++)
                 d->visited[i] = calloc(w, sizeof(int));
-        
-            pthread_mutex_lock(&lobbyMutex);   // ora è libero, nessun deadlock
+
+            pthread_mutex_lock(&lobbyMutex);
             nClients++;
             pthread_mutex_unlock(&lobbyMutex);
-        
+
             pthread_t tid;
             pthread_create(&tid, NULL, newUser, d);
             pthread_detach(tid);
-        
+
             char logmsg[256];
             snprintf(logmsg, sizeof(logmsg),
                      "SERVER: connessione accettata da %s (client #%d)",
@@ -883,6 +860,7 @@ int main() {
             log_event(logmsg);
         }
     }
+
     log_event("SERVER: socket chiuso, processo terminato");
     sleep(5);
     close(sockfd);

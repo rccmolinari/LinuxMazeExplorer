@@ -1,2 +1,1 @@
-mimmo 0 1
 zio 0 1

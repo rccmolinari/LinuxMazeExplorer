@@ -7,7 +7,7 @@
 
 int dx[4] = {-2, 2, 0, 0}; // su, giù, sinistra, destra
 int dy[4] = {0, 0, -2, 2};
-int itemRate = 3; // probabilità 1/itemRate per generare un item
+int itemRate = 5; // probabilità 1/itemRate per generare un item
 
 // shuffle Fisher–Yates
 void shuffle(int *arr, int n) {

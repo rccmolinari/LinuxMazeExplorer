@@ -17,13 +17,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 6
+#define SECONDS_TO_BLUR 20
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 5
+#define TIMER 300
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione

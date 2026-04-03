@@ -11,5 +11,3 @@ kfrancesco;totti
 klop;klep
 aziz;lolo
 jojo;jeje
-rocco1;molinari
-;
