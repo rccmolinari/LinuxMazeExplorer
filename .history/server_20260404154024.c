@@ -17,13 +17,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 5
+#define SECONDS_TO_BLUR 6
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 40
+#define TIMER 5
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -751,7 +751,7 @@ void *newUser(void *arg) {
           send(d->user, "L", 1, 0);
       }
       recv(d->user, &closeM, 1, 0);
-    }
+  }
     }
 
     /* ----- CLEANUP ----- */

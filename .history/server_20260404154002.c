@@ -17,13 +17,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 5
+#define SECONDS_TO_BLUR 6
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 40
+#define TIMER 5
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -711,48 +711,47 @@ void *newUser(void *arg) {
         gaming(d);
         writeScore(d->username, d);
 
-  /* ----- ENDGAME ----- */
-  d->gameOver = 1;
-  if (!d->disconnected)
-      send(d->user, "E", 1, 0);
+/* ----- ENDGAME ----- */
+d->gameOver = 1;
+if (!d->disconnected)
+    send(d->user, "E", 1, 0);
 
-  pthread_mutex_lock(&lobbyMutex);
-  nReady--;
-  snprintf(logmsg, sizeof(logmsg),
-           "[%s@%s] ENDGAME: partita terminata (%d ancora in gioco)", d->username, d->ip, nReady);
-  log_event(logmsg);
-  if (nReady == 0) {
-      log_event("ENDGAME: tutti i client hanno finito, calcolo vincitore in corso");
-      printWinnerWithPipe(gWinner);
-      snprintf(logmsg, sizeof(logmsg), "ENDGAME: vincitore -> '%s'", gWinner);
-      log_event(logmsg);
-      pthread_mutex_lock(&gWinnerMutex);
-      gWinnerCalculated = 1;
-      pthread_cond_broadcast(&gWinnerCond);
-      pthread_mutex_unlock(&gWinnerMutex);
-  }
-  pthread_mutex_unlock(&lobbyMutex);
+pthread_mutex_lock(&lobbyMutex);
+nReady--;
+snprintf(logmsg, sizeof(logmsg),
+         "[%s@%s] ENDGAME: partita terminata (%d ancora in gioco)", d->username, d->ip, nReady);
+log_event(logmsg);
+if (nReady == 0) {
+    log_event("ENDGAME: tutti i client hanno finito, calcolo vincitore in corso");
+    printWinnerWithPipe(gWinner);
+    snprintf(logmsg, sizeof(logmsg), "ENDGAME: vincitore -> '%s'", gWinner);
+    log_event(logmsg);
+    pthread_mutex_lock(&gWinnerMutex);
+    gWinnerCalculated = 1;
+    pthread_cond_broadcast(&gWinnerCond);
+    pthread_mutex_unlock(&gWinnerMutex);
+}
+pthread_mutex_unlock(&lobbyMutex);
 
-  /* i client morti non aspettano: uscirebbero subito senza poter ricevere nulla */
-  if (!d->disconnected) {
-      pthread_mutex_lock(&gWinnerMutex);
-      while (!gWinnerCalculated)
-          pthread_cond_wait(&gWinnerCond, &gWinnerMutex);
-      pthread_mutex_unlock(&gWinnerMutex);
+/* i client morti non aspettano: uscirebbero subito senza poter ricevere nulla */
+if (!d->disconnected) {
+    pthread_mutex_lock(&gWinnerMutex);
+    while (!gWinnerCalculated)
+        pthread_cond_wait(&gWinnerCond, &gWinnerMutex);
+    pthread_mutex_unlock(&gWinnerMutex);
 
-      char closeM;
-      if (strcmp(gWinner, d->username) == 0) {
-          snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", d->username, d->ip);
-          log_event(logmsg);
-          send(d->user, "W", 1, 0);
-      } else {
-          snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", d->username, d->ip);
-          log_event(logmsg);
-          send(d->user, "L", 1, 0);
-      }
-      recv(d->user, &closeM, 1, 0);
+    char closeM;
+    if (strcmp(gWinner, d->username) == 0) {
+        snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", d->username, d->ip);
+        log_event(logmsg);
+        send(d->user, "W", 1, 0);
+    } else {
+        snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", d->username, d->ip);
+        log_event(logmsg);
+        send(d->user, "L", 1, 0);
     }
-    }
+    recv(d->user, &closeM, 1, 0);
+}
 
     /* ----- CLEANUP ----- */
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa (authOk=%d)", d->ip, d->username, authOk);

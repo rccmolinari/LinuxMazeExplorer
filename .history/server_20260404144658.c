@@ -17,13 +17,13 @@
 /*
  * Intervallo in secondi tra un invio di nebbia e il successivo.
  */
-#define SECONDS_TO_BLUR 5
+#define SECONDS_TO_BLUR 6
 
 /*
  * Durata della partita in secondi. Allo scadere il server notifica
  * tutti i client e la sessione si chiude.
  */
-#define TIMER 40
+#define TIMER 5
 
 /* --------------------------------------------------------------------------
  * Sincronizzazione
@@ -90,7 +90,6 @@ struct data {
     int    collectedItems; /* oggetti raccolti durante la partita             */
     int    exitFlag;       /* 1 se il giocatore ha raggiunto l'uscita         */
     int    gameOver;       /* 1 quando il giocatore ha finito: segnala al thread blur di fermarsi */
-    int    disconnected;   /* 1 se il giocatore si e' disconnesso */
     pthread_mutex_t socketWriteMutex; /* protegge le send() sul socket        */
 };
 
@@ -475,28 +474,10 @@ void gaming(struct data *d) {
 
     char buffer[256];
     while (!isTimeUp()) {
-        /* select con timeout 1s: sblocca il loop quando scade il timer,
-           e rileva la disconnect senza restare bloccati su recv forever */
-        fd_set rfds;
-        FD_ZERO(&rfds);
-        FD_SET(d->user, &rfds);
-        struct timeval tv = { .tv_sec = 1, .tv_usec = 0 };
-        int sel = select(d->user + 1, &rfds, NULL, NULL, &tv);
-
-        if (sel < 0) {
-            snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: errore socket", d->username, d->ip);
-            log_event(logmsg);
-            d->disconnected = 1;
-            removeUser(d->username);
-            break;
-        }
-        if (sel == 0) continue; /* timeout: rivaluta isTimeUp() */
-
         int r = recv(d->user, buffer, sizeof(buffer) - 1, 0);
         if (r <= 0) {
             snprintf(logmsg, sizeof(logmsg), "[%s@%s] GAME: client disconnesso durante la partita", d->username, d->ip);
             log_event(logmsg);
-            d->disconnected = 1;
             removeUser(d->username);
             break;
         }
@@ -521,7 +502,9 @@ void gaming(struct data *d) {
                  "[%s@%s] MOVE: '%.32s' (pos: %d,%d)", d->username, d->ip, buffer, d->x, d->y);
         log_event(logmsg);
 
-        int nextX = d->x, nextY = d->y, win = 0;
+        int nextX = d->x;
+        int nextY = d->y;
+        int win   = 0;
 
         if      (!strcmp(buffer, "W")) { if (d->x == 0)             win = 1; else nextX--; }
         else if (!strcmp(buffer, "S")) { if (d->x == d->height - 1) win = 1; else nextX++; }
@@ -538,7 +521,10 @@ void gaming(struct data *d) {
             break;
         }
 
-        int moved = 0, gotItem = 0;
+        /* --- sezione critica: modifica mappa condivisa --- */
+        int moved   = 0;
+        int gotItem = 0;
+
         pthread_mutex_lock(&mutex);
         if (d->map[nextX][nextY] != WALL) {
             moved = 1;
@@ -546,23 +532,29 @@ void gaming(struct data *d) {
             d->y = nextY;
             d->visited[d->x][d->y] = 1;
             adjVisit(d->width, d->height, d->x, d->y, d->visited);
+
             if (d->map[d->x][d->y] == ITEM) {
                 d->map[d->x][d->y] = PATH;
                 d->collectedItems++;
                 gotItem = 1;
             }
         }
-        pthread_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&mutex); /* sempre eseguito, qualunque sia il caso */
 
         if (gotItem) {
-            snprintf(logmsg, sizeof(logmsg), "[%s@%s] ITEM: raccolto in (%d,%d), totale=%d",
+            snprintf(logmsg, sizeof(logmsg),
+                     "[%s@%s] ITEM: raccolto in (%d,%d), totale=%d",
                      d->username, d->ip, d->x, d->y, d->collectedItems);
             log_event(logmsg);
         }
-        snprintf(logmsg, sizeof(logmsg), moved ?
-                 "[%s@%s] MOVE: nuova pos (%d,%d)" :
-                 "[%s@%s] MOVE: movimento bloccato (muro)",
-                 d->username, d->ip, d->x, d->y);
+
+        if (moved) {
+            snprintf(logmsg, sizeof(logmsg),
+                     "[%s@%s] MOVE: nuova pos (%d,%d)", d->username, d->ip, d->x, d->y);
+        } else {
+            snprintf(logmsg, sizeof(logmsg),
+                     "[%s@%s] MOVE: movimento bloccato (muro)", d->username, d->ip);
+        }
         log_event(logmsg);
 
         pthread_mutex_lock(&(d->socketWriteMutex));
@@ -588,18 +580,18 @@ void gaming(struct data *d) {
 void *newUser(void *arg) {
     struct data *d = (struct data *)arg;
     char logmsg[512];
-    int authOk = 0; /* flag: 1 se l'autenticazione e' andata a buon fine */
-    int error  = 0; /* flag: 1 se si e' verificato un errore in fase di auth */
+    int authOk = 0;
+    int error  = 0;
+
     /* ----- AUTH ----- */
     char type;
     int n;
 
-/* loop pre-auth: il client può interrogare quanti giocatori sono connessi */
     do {
         n = recv(d->user, &type, 1, 0);
         if (n <= 0) {
             snprintf(logmsg, sizeof(logmsg),
-                    "[%s] AUTH: nessun dato ricevuto, client disconnesso", d->ip);
+                     "[%s] AUTH: client disconnesso prima dell'auth", d->ip);
             log_event(logmsg);
             error = 1;
             break;
@@ -609,16 +601,12 @@ void *newUser(void *arg) {
             int count = nClients;
             pthread_mutex_unlock(&lobbyMutex);
             send(d->user, &count, sizeof(count), 0);
-            snprintf(logmsg, sizeof(logmsg),
-                    "[%s] INFO: richiesta nClients -> %d", d->ip, count);
-            log_event(logmsg);
         }
     } while (type == 'C');
+
     if (!error && type == 'R') {
         int res = registration(d);
         if (res == -2) {
-            snprintf(logmsg, sizeof(logmsg), "[%s@%s] AUTH: registrazione fallita (errore I/O)", d->username, d->ip);
-            log_event(logmsg);
             send(d->user, "N", 1, 0);
             error = 1;
         } else if (res == -1) {
@@ -627,62 +615,27 @@ void *newUser(void *arg) {
             send(d->user, "N", 1, 0);
             error = 1;
         }
-
         if (!error) {
-            snprintf(logmsg, sizeof(logmsg), "[%s@%s] AUTH: registrazione avvenuta con successo", d->username, d->ip);
-            log_event(logmsg);
             send(d->user, "Y", 1, 0);
-
             res = authenticate(d);
-            if (res == -2) {
-                snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: nessun dato ricevuto dopo registrazione, client disconnesso", d->ip);
-                log_event(logmsg);
-                send(d->user, "N", 1, 0);
-                error = 1;
-            } else if (res == -1) {
-                snprintf(logmsg, sizeof(logmsg), "[%s@%s] AUTH: login fallito dopo registrazione", d->username, d->ip);
-                log_event(logmsg);
-                send(d->user, "N", 1, 0);
-                error = 1;
-            }
+            if (res != 0) { send(d->user, "N", 1, 0); error = 1; }
         }
-
         if (!error) {
-            snprintf(logmsg, sizeof(logmsg), "[%s@%s] AUTH: login avvenuto con successo dopo registrazione", d->username, d->ip);
-            log_event(logmsg);
             send(d->user, "Y", 1, 0);
             authOk = 1;
         }
 
     } else if (!error && type == 'L') {
         int res = authenticate(d);
-        if (res == -2) {
-            snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: nessun dato ricevuto durante login, client disconnesso", d->ip);
-            log_event(logmsg);
-            send(d->user, "N", 1, 0);
-            error = 1;
-        } else if (res == -1) {
-            snprintf(logmsg, sizeof(logmsg), "[%s@%s] AUTH: utente non trovato durante login", d->username, d->ip);
-            log_event(logmsg);
-            send(d->user, "N", 1, 0);
-            error = 1;
-        }
-
-        if (!error) {
-            snprintf(logmsg, sizeof(logmsg), "[%s@%s] AUTH: login avvenuto con successo", d->username, d->ip);
-            log_event(logmsg);
-            send(d->user, "Y", 1, 0);
-            authOk = 1;
-        }
+        if (res != 0) { send(d->user, "N", 1, 0); error = 1; }
+        if (!error)   { send(d->user, "Y", 1, 0); authOk = 1; }
 
     } else if (!error) {
-        snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: tipo non valido '%c'", d->ip, type);
-        log_event(logmsg);
         send(d->user, "N", 1, 0);
         error = 1;
     }
 
-    /* ----- LOBBY + GAME + ENDGAME: solo se auth ok ----- */
+    /* ----- LOBBY ----- */
     if (!error) {
         insertUser(d->username);
         pthread_mutex_lock(&lobbyMutex);
@@ -690,20 +643,79 @@ void *newUser(void *arg) {
         snprintf(logmsg, sizeof(logmsg),
                  "[%s@%s] LOBBY: in attesa (%d/%d)", d->username, d->ip, nReady, nClients);
         log_event(logmsg);
+
         if (nReady == nClients) {
+            /* sono l'ultimo ad arrivare: avvio la partita */
             gameStarted = 1;
-            log_event("LOBBY: tutti i giocatori pronti, partita in avvio");
+            log_event("LOBBY: tutti pronti, partita in avvio");
             pthread_create(&timerTid, NULL, (void *)timer, NULL);
             pthread_cond_broadcast(&lobbyCond);
-        } else {
-            while (!gameStarted)
-                pthread_cond_wait(&lobbyCond, &lobbyMutex);
-        }
-        pthread_mutex_unlock(&lobbyMutex);
+            pthread_mutex_unlock(&lobbyMutex);
 
-        snprintf(logmsg, sizeof(logmsg), "[%s@%s] LOBBY: partita avviata, inizio gioco", d->username, d->ip);
+        } else {
+            /* attendo con timedwait + probe sul socket ogni secondo */
+            int lobbyDead = 0;
+            while (!gameStarted && !lobbyDead) {
+                struct timespec ts;
+                clock_gettime(CLOCK_REALTIME, &ts);
+                ts.tv_sec += 1;
+                pthread_cond_timedwait(&lobbyCond, &lobbyMutex, &ts);
+                if (gameStarted) break;
+
+                /* rilascio il mutex per fare la probe senza tenerlo */
+                pthread_mutex_unlock(&lobbyMutex);
+                char probe;
+                int r = recv(d->user, &probe, 1, MSG_PEEK | MSG_DONTWAIT);
+                pthread_mutex_lock(&lobbyMutex);
+
+                /*
+                 * r == 0          → FIN: client ha chiuso il socket
+                 * r == -1 e errno != EAGAIN/EWOULDBLOCK → RST: terminale killato
+                 */
+                int isDead = (r == 0) ||
+                             (r < 0 && errno != EAGAIN && errno != EWOULDBLOCK);
+
+                if (isDead) {
+                    lobbyDead = 1;
+                    nReady--;
+                    nClients--;
+                    removeUser(d->username);
+                    snprintf(logmsg, sizeof(logmsg),
+                             "[%s@%s] LOBBY: client morto (nReady=%d nClients=%d)",
+                             d->username, d->ip, nReady, nClients);
+                    log_event(logmsg);
+
+                    if (!gameStarted && nClients > 0 && nReady == nClients) {
+                        gameStarted = 1;
+                        log_event("LOBBY: client perso, partita avviata con i rimasti");
+                        pthread_create(&timerTid, NULL, (void *)timer, NULL);
+                        pthread_cond_broadcast(&lobbyCond);
+                    } else if (nClients == 0) {
+                        pthread_mutex_lock(&endMutex);
+                        gameEnd = 1;
+                        pthread_mutex_unlock(&endMutex);
+                        /* sveglia anche i thread winner in caso fossero in attesa */
+                        pthread_mutex_lock(&gWinnerMutex);
+                        gWinnerCalculated = 1;
+                        pthread_cond_broadcast(&gWinnerCond);
+                        pthread_mutex_unlock(&gWinnerMutex);
+                    }
+                }
+            }
+            pthread_mutex_unlock(&lobbyMutex);
+
+            if (lobbyDead) {
+                close(d->user);
+                for (int i = 0; i < d->height; i++) free(d->visited[i]);
+                free(d->visited);
+                return NULL;
+            }
+        }
+
+        snprintf(logmsg, sizeof(logmsg), "[%s@%s] LOBBY: partita avviata", d->username, d->ip);
         log_event(logmsg);
 
+        /* ----- GAME ----- */
         pthread_t blurTid;
         pthread_create(&blurTid, NULL, asyncSendBlurredMap, d);
         pthread_detach(blurTid);
@@ -711,56 +723,64 @@ void *newUser(void *arg) {
         gaming(d);
         writeScore(d->username, d);
 
-  /* ----- ENDGAME ----- */
-  d->gameOver = 1;
-  if (!d->disconnected)
-      send(d->user, "E", 1, 0);
+        /* ----- ENDGAME ----- */
+        d->gameOver = 1;
+        send(d->user, "E", 1, 0); /* può fallire se client morto: ignorato (SIGPIPE_IGN) */
 
-  pthread_mutex_lock(&lobbyMutex);
-  nReady--;
-  snprintf(logmsg, sizeof(logmsg),
-           "[%s@%s] ENDGAME: partita terminata (%d ancora in gioco)", d->username, d->ip, nReady);
-  log_event(logmsg);
-  if (nReady == 0) {
-      log_event("ENDGAME: tutti i client hanno finito, calcolo vincitore in corso");
-      printWinnerWithPipe(gWinner);
-      snprintf(logmsg, sizeof(logmsg), "ENDGAME: vincitore -> '%s'", gWinner);
-      log_event(logmsg);
-      pthread_mutex_lock(&gWinnerMutex);
-      gWinnerCalculated = 1;
-      pthread_cond_broadcast(&gWinnerCond);
-      pthread_mutex_unlock(&gWinnerMutex);
-  }
-  pthread_mutex_unlock(&lobbyMutex);
+        pthread_mutex_lock(&lobbyMutex);
+        nReady--;
+        snprintf(logmsg, sizeof(logmsg),
+                 "[%s@%s] ENDGAME: (%d ancora in gioco)", d->username, d->ip, nReady);
+        log_event(logmsg);
+        if (nReady == 0) {
+            log_event("ENDGAME: tutti finiti, calcolo vincitore");
+            printWinnerWithPipe(gWinner);
+            snprintf(logmsg, sizeof(logmsg), "ENDGAME: vincitore -> '%s'", gWinner);
+            log_event(logmsg);
+            pthread_mutex_lock(&gWinnerMutex);
+            gWinnerCalculated = 1;
+            pthread_cond_broadcast(&gWinnerCond);
+            pthread_mutex_unlock(&gWinnerMutex);
+        }
+        pthread_mutex_unlock(&lobbyMutex);
 
-  /* i client morti non aspettano: uscirebbero subito senza poter ricevere nulla */
-  if (!d->disconnected) {
-      pthread_mutex_lock(&gWinnerMutex);
-      while (!gWinnerCalculated)
-          pthread_cond_wait(&gWinnerCond, &gWinnerMutex);
-      pthread_mutex_unlock(&gWinnerMutex);
+        pthread_mutex_lock(&gWinnerMutex);
+        while (!gWinnerCalculated)
+            pthread_cond_wait(&gWinnerCond, &gWinnerMutex);
+        pthread_mutex_unlock(&gWinnerMutex);
 
-      char closeM;
-      if (strcmp(gWinner, d->username) == 0) {
-          snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", d->username, d->ip);
-          log_event(logmsg);
-          send(d->user, "W", 1, 0);
-      } else {
-          snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", d->username, d->ip);
-          log_event(logmsg);
-          send(d->user, "L", 1, 0);
-      }
-      recv(d->user, &closeM, 1, 0);
-    }
+        if (strcmp(gWinner, d->username) == 0) {
+            snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: vincitore", d->username, d->ip);
+            log_event(logmsg);
+            send(d->user, "W", 1, 0);
+        } else {
+            snprintf(logmsg, sizeof(logmsg), "[%s@%s] RESULT: sconfitto", d->username, d->ip);
+            log_event(logmsg);
+            send(d->user, "L", 1, 0);
+        }
+        char closeM;
+        recv(d->user, &closeM, 1, 0);
     }
 
-    /* ----- CLEANUP ----- */
-    snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa (authOk=%d)", d->ip, d->username, authOk);
+    /* ----- CLEANUP (raggiunto solo da auth fallita o game completato) ----- */
+    snprintf(logmsg, sizeof(logmsg),
+             "[%s@%s] CLEANUP: connessione chiusa (authOk=%d)",
+             d->username[0] ? d->username : "?", d->ip, authOk);
     log_event(logmsg);
     close(d->user);
-
+    removeUser(d->username);
     pthread_mutex_lock(&lobbyMutex);
     nClients--;
+    /*
+     * Se il client è morto durante l'auth (mai entrato in lobby),
+     * controlla se i thread già in lobby possono ora partire.
+     */
+    if (!authOk && !gameStarted && nClients > 0 && nReady == nClients) {
+        gameStarted = 1;
+        log_event("LOBBY: client perso in auth, partita avviata con i rimasti");
+        pthread_create(&timerTid, NULL, (void *)timer, NULL);
+        pthread_cond_broadcast(&lobbyCond);
+    }
     if (nClients == 0) {
         pthread_mutex_lock(&endMutex);
         gameEnd = 1;
@@ -768,14 +788,10 @@ void *newUser(void *arg) {
     }
     pthread_mutex_unlock(&lobbyMutex);
 
-    for (int i = 0; i < d->height; i++)
-        free(d->visited[i]);
+    for (int i = 0; i < d->height; i++) free(d->visited[i]);
     free(d->visited);
-    //pthread_mutex_destroy(&(d->socketWriteMutex));
-    //free(d);
     return NULL;
 }
-
 /* --------------------------------------------------------------------------
  * main
  *
@@ -879,7 +895,8 @@ int main() {
             send(cfd, "A", 1, 0);
         
             struct data *d = malloc(sizeof(struct data));
-            d->user           = cfd;
+            d->username[0] = '\0'; 
+            d->user = cfd;
             strncpy(d->ip, inet_ntoa(cli.sin_addr), INET_ADDRSTRLEN - 1);
             d->ip[INET_ADDRSTRLEN - 1] = '\0';
             d->map            = map;
@@ -888,7 +905,6 @@ int main() {
             d->collectedItems = 0;
             d->exitFlag       = 0;
             d->gameOver       = 0;
-            d->disconnected   = 0;
             pthread_mutex_init(&(d->socketWriteMutex), NULL);
         
             d->visited = malloc(h * sizeof(int *));
