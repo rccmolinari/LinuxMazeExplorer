@@ -1,50 +1,35 @@
-[2026-04-04 13:44:13] SERVER: avvio in corso
-[2026-04-04 13:44:13] SERVER: in ascolto sulla porta 8080
-[2026-04-04 13:44:19] SERVER: connessione accettata da 172.18.0.1 (client #1)
-[2026-04-04 13:44:20] SERVER: connessione accettata da 172.18.0.1 (client #2)
-[2026-04-04 13:44:22] [zio@172.18.0.1] AUTH: login avvenuto con successo
-[2026-04-04 13:44:22] [zio@172.18.0.1] LOBBY: in attesa (1/2)
-[2026-04-04 13:44:24] [mimmo@172.18.0.1] AUTH: login avvenuto con successo
-[2026-04-04 13:44:24] [mimmo@172.18.0.1] LOBBY: in attesa (2/2)
-[2026-04-04 13:44:24] LOBBY: tutti i giocatori pronti, partita in avvio
-[2026-04-04 13:44:24] [mimmo@172.18.0.1] LOBBY: partita avviata, inizio gioco
-[2026-04-04 13:44:24] [mimmo@172.18.0.1] GAME: spawn assegnato in (1,2)
-[2026-04-04 13:44:24] [zio@172.18.0.1] LOBBY: partita avviata, inizio gioco
-[2026-04-04 13:44:24] [zio@172.18.0.1] GAME: spawn assegnato in (2,1)
-[2026-04-04 13:44:24] TIMER: countdown avviato
-[2026-04-04 13:44:24] [mimmo@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
-[2026-04-04 13:44:24] [zio@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
-[2026-04-04 13:44:28] [zio@172.18.0.1] GAME: invio lista utenti
-[2026-04-04 13:44:29] [zio@172.18.0.1] MOVE: 'D' (pos: 2,1)
-[2026-04-04 13:44:29] [zio@172.18.0.1] MOVE: movimento bloccato (muro)
-[2026-04-04 13:44:29] [mimmo@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-04-04 13:44:29] [zio@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-04-04 13:44:30] [zio@172.18.0.1] GAME: invio lista utenti
-[2026-04-04 13:44:31] [zio@172.18.0.1] MOVE: 'A' (pos: 2,1)
-[2026-04-04 13:44:31] [zio@172.18.0.1] MOVE: movimento bloccato (muro)
-[2026-04-04 13:44:31] [zio@172.18.0.1] MOVE: 'W' (pos: 2,1)
-[2026-04-04 13:44:31] [zio@172.18.0.1] MOVE: nuova pos (1,1)
-[2026-04-04 13:44:32] [zio@172.18.0.1] MOVE: 'W' (pos: 1,1)
-[2026-04-04 13:44:32] [zio@172.18.0.1] MOVE: nuova pos (0,1)
-[2026-04-04 13:44:33] [zio@172.18.0.1] MOVE: 'W' (pos: 0,1)
-[2026-04-04 13:44:33] [zio@172.18.0.1] GAME: uscita dalla mappa trovata
-[2026-04-04 13:44:33] [zio@172.18.0.1] GAME: sessione terminata
-[2026-04-04 13:44:33] [zio@172.18.0.1] SCORE: oggetti=0 exit=1
-[2026-04-04 13:44:33] [zio@172.18.0.1] ENDGAME: partita terminata (1 ancora in gioco)
-[2026-04-04 13:44:34] [mimmo@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-04-04 13:44:39] [mimmo@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-04-04 13:44:44] [mimmo@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-04-04 13:44:49] [mimmo@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-04-04 13:44:54] [mimmo@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-04-04 13:44:59] [mimmo@172.18.0.1] BLUR: mappa sfocata inviata
-[2026-04-04 13:45:04] TIMER: tempo scaduto, fine partita
-[2026-04-04 13:45:04] [mimmo@172.18.0.1] GAME: sessione terminata
-[2026-04-04 13:45:04] [mimmo@172.18.0.1] SCORE: oggetti=0 exit=0
-[2026-04-04 13:45:04] [mimmo@172.18.0.1] ENDGAME: partita terminata (0 ancora in gioco)
-[2026-04-04 13:45:04] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
-[2026-04-04 13:45:04] ENDGAME: vincitore -> 'zio'
-[2026-04-04 13:45:04] [mimmo@172.18.0.1] RESULT: sconfitto
-[2026-04-04 13:45:04] [zio@172.18.0.1] RESULT: vincitore
-[2026-04-04 13:45:04] [172.18.0.1@zio] CLEANUP: connessione chiusa (authOk=1)
-[2026-04-04 13:45:04] [172.18.0.1@mimmo] CLEANUP: connessione chiusa (authOk=1)
-[2026-04-04 13:45:05] SERVER: socket chiuso, processo terminato
+[2026-04-04 14:14:54] SERVER: avvio in corso
+[2026-04-04 14:14:54] SERVER: in ascolto sulla porta 8080
+[2026-04-04 14:14:58] SERVER: connessione accettata da 172.18.0.1 (client #1)
+[2026-04-04 14:14:59] SERVER: connessione accettata da 172.18.0.1 (client #2)
+[2026-04-04 14:15:01] [zio@172.18.0.1] AUTH: login avvenuto con successo
+[2026-04-04 14:15:01] [zio@172.18.0.1] LOBBY: in attesa (1/2)
+[2026-04-04 14:15:04] [mimmo@172.18.0.1] AUTH: login avvenuto con successo
+[2026-04-04 14:15:04] [mimmo@172.18.0.1] LOBBY: in attesa (2/2)
+[2026-04-04 14:15:04] LOBBY: tutti i giocatori pronti, partita in avvio
+[2026-04-04 14:15:04] [mimmo@172.18.0.1] LOBBY: partita avviata, inizio gioco
+[2026-04-04 14:15:04] [mimmo@172.18.0.1] GAME: spawn assegnato in (1,0)
+[2026-04-04 14:15:04] TIMER: countdown avviato
+[2026-04-04 14:15:04] [zio@172.18.0.1] LOBBY: partita avviata, inizio gioco
+[2026-04-04 14:15:04] [zio@172.18.0.1] GAME: spawn assegnato in (1,2)
+[2026-04-04 14:15:04] [mimmo@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-04-04 14:15:04] [zio@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] MOVE: 'D' (pos: 1,0)
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] MOVE: nuova pos (1,1)
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] MOVE: 'D' (pos: 1,1)
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] MOVE: nuova pos (1,2)
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] MOVE: 'D' (pos: 1,2)
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] GAME: uscita dalla mappa trovata
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] GAME: sessione terminata
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] SCORE: oggetti=0 exit=1
+[2026-04-04 14:15:05] [mimmo@172.18.0.1] ENDGAME: partita terminata (1 ancora in gioco)
+[2026-04-04 14:15:08] [zio@172.18.0.1] GAME: client disconnesso durante la partita
+[2026-04-04 14:15:08] [zio@172.18.0.1] GAME: sessione terminata
+[2026-04-04 14:15:08] [zio@172.18.0.1] SCORE: oggetti=0 exit=0
+[2026-04-04 14:15:08] [zio@172.18.0.1] ENDGAME: partita terminata (0 ancora in gioco)
+[2026-04-04 14:15:08] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
+[2026-04-04 14:15:08] ENDGAME: vincitore -> 'mimmo'
+[2026-04-04 14:15:08] [172.18.0.1@zio] CLEANUP: connessione chiusa (authOk=1)
+[2026-04-04 14:15:08] [mimmo@172.18.0.1] RESULT: vincitore
+[2026-04-04 14:15:08] [172.18.0.1@mimmo] CLEANUP: connessione chiusa (authOk=1)
+[2026-04-04 14:15:08] SERVER: socket chiuso, processo terminato
