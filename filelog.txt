@@ -1,26 +1,13 @@
-[2026-04-03 17:33:59] SERVER: avvio in corso
-[2026-04-03 17:33:59] SERVER: in ascolto sulla porta 8080
-[2026-04-03 17:34:06] SERVER: connessione accettata da 172.18.0.1 (client #1)
-[2026-04-03 17:34:09] [zio@172.18.0.1] AUTH: login avvenuto con successo
-[2026-04-03 17:34:09] [zio@172.18.0.1] LOBBY: in attesa (1/1)
-[2026-04-03 17:34:09] LOBBY: tutti i giocatori pronti, partita in avvio
-[2026-04-03 17:34:09] [zio@172.18.0.1] LOBBY: partita avviata, inizio gioco
-[2026-04-03 17:34:09] [zio@172.18.0.1] GAME: spawn assegnato in (1,2)
-[2026-04-03 17:34:09] [zio@172.18.0.1] GAME: mappa iniziale inviata, attesa comandi
-[2026-04-03 17:34:09] TIMER: countdown avviato
-[2026-04-03 17:34:11] SERVER: rifiutata connessione da 172.18.0.1 (partita gia' iniziata)
-[2026-04-03 17:34:12] [zio@172.18.0.1] MOVE: 'A' (pos: 1,2)
-[2026-04-03 17:34:12] [zio@172.18.0.1] MOVE: nuova pos (1,1)
-[2026-04-03 17:34:13] [zio@172.18.0.1] MOVE: 'W' (pos: 1,1)
-[2026-04-03 17:34:13] [zio@172.18.0.1] MOVE: nuova pos (0,1)
-[2026-04-03 17:34:13] [zio@172.18.0.1] MOVE: 'W' (pos: 0,1)
-[2026-04-03 17:34:13] [zio@172.18.0.1] GAME: uscita dalla mappa trovata
-[2026-04-03 17:34:13] [zio@172.18.0.1] GAME: sessione terminata
-[2026-04-03 17:34:13] [zio@172.18.0.1] SCORE: oggetti=0 exit=1
-[2026-04-03 17:34:13] [zio@172.18.0.1] ENDGAME: partita terminata (0 ancora in gioco)
-[2026-04-03 17:34:13] ENDGAME: tutti i client hanno finito, calcolo vincitore in corso
-[2026-04-03 17:34:13] ENDGAME: vincitore -> 'zio'
-[2026-04-03 17:34:13] [zio@172.18.0.1] RESULT: vincitore
-[2026-04-03 17:34:13] [172.18.0.1@zio] CLEANUP: connessione chiusa (authOk=1)
-[2026-04-03 17:34:14] SERVER: socket chiuso, processo terminato
-[2026-04-03 17:34:14] TIMER: tempo scaduto, fine partita
+[2026-04-04 12:18:14] SERVER: avvio in corso
+[2026-04-04 12:18:14] SERVER: in ascolto sulla porta 8080
+[2026-04-04 12:19:27] SERVER: connessione accettata da 172.18.0.1 (client #1)
+[2026-04-04 12:19:31] [172.18.0.1] INFO: richiesta nClients -> 1
+[2026-04-04 12:20:00] SERVER: connessione accettata da 172.18.0.1 (client #2)
+[2026-04-04 12:20:02] [172.18.0.1] INFO: richiesta nClients -> 2
+[2026-04-04 12:20:03] [172.18.0.1] INFO: richiesta nClients -> 2
+[2026-04-04 12:20:04] [172.18.0.1] INFO: richiesta nClients -> 2
+[2026-04-04 12:20:09] [172.18.0.1] INFO: richiesta nClients -> 2
+[2026-04-04 12:20:09] [172.18.0.1] INFO: richiesta nClients -> 2
+[2026-04-04 12:20:10] [172.18.0.1] INFO: richiesta nClients -> 2
+[2026-04-04 12:20:12] [ciao@172.18.0.1] AUTH: utente non trovato durante login
+[2026-04-04 12:20:12] [172.18.0.1@ciao] CLEANUP: connessione chiusa (authOk=0)

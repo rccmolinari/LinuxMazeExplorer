@@ -278,22 +278,13 @@ int main(int argc, char* argv[]) {
     do {
         printf("  [1] Registrati\n");
         printf("  [2] Login\n");
-        printf("  [3] Giocatori connessi\n");
         printf("  Scelta: ");
         fflush(stdout);
-    
         char choiceBuf[16];
         int nb = read(STDIN_FILENO, choiceBuf, sizeof(choiceBuf) - 1);
         if (nb > 0) { choiceBuf[nb] = '\0'; choice = atoi(choiceBuf); }
-    
-        if (choice == 3) {
-            send(sockfd, "C", 1, 0);
-            int count = 0;
-            recv(sockfd, &count, sizeof(count), 0);
-            printf("\n  Giocatori attualmente connessi: %d\n\n", count);
-            choice = -1;   /* ripresenta il menu */
-        }
     } while (choice < 1 || choice > 2);
+
     int readedbyte = 0;
     char res;
     switch(choice) {
@@ -349,13 +340,31 @@ int main(int argc, char* argv[]) {
             }
             break;
     }
-    
     printf("\n  In attesa che tutti i giocatori siano pronti...\n");
+    fflush(stdout);
+
+    /* mini-loop lobby: ogni secondo chiede al server quanti client ci sono.
+     * Il server risponde con un int: nClients > 0, oppure -1 come segnale GO. */
+    while (1) {
+        send(sockfd, "lobby", 5, 0);
+        int nc;
+        int nr = recv(sockfd, &nc, sizeof(nc), 0);
+        if (nr <= 0) {
+            printf("\n  Errore: server disconnesso in lobby.\n");
+            close(sockfd);
+            return 1;
+        }
+        if (nc == -1) break; /* GO: la partita sta iniziando */
+        printf("\r  Giocatori in lobby: %d   ", nc);
+        fflush(stdout);
+        sleep(1);
+    }
+    printf("\n  Tutti pronti! La partita sta iniziando...\n\n");
     fflush(stdout);
 
     int width, height, x, y;
     int effectiveCols, effectiveRows;
-    
+
     pthread_mutex_lock(&socketMutex);
     char **map = receiveMap(sockfd, &width, &height, &x, &y, &effectiveRows, &effectiveCols);
     pthread_mutex_unlock(&socketMutex);

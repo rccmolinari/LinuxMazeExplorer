@@ -275,6 +275,7 @@ int main(int argc, char* argv[]) {
     printf("======================================\n\n");
 
     int choice = -1;
+    int choice = -1;
     do {
         printf("  [1] Registrati\n");
         printf("  [2] Login\n");

@@ -582,30 +582,16 @@ void *newUser(void *arg) {
     char logmsg[512];
     int authOk = 0; /* flag: 1 se l'autenticazione e' andata a buon fine */
     int error  = 0; /* flag: 1 se si e' verificato un errore in fase di auth */
+
     /* ----- AUTH ----- */
     char type;
-    int n;
+    int n = recv(d->user, &type, 1, 0);
+    if (n <= 0) {
+        snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: nessun dato ricevuto, client disconnesso", d->ip);
+        log_event(logmsg);
+        error = 1;
+    }
 
-/* loop pre-auth: il client può interrogare quanti giocatori sono connessi */
-    do {
-        n = recv(d->user, &type, 1, 0);
-        if (n <= 0) {
-            snprintf(logmsg, sizeof(logmsg),
-                    "[%s] AUTH: nessun dato ricevuto, client disconnesso", d->ip);
-            log_event(logmsg);
-            error = 1;
-            break;
-        }
-        if (type == 'C') {
-            pthread_mutex_lock(&lobbyMutex);
-            int count = nClients;
-            pthread_mutex_unlock(&lobbyMutex);
-            send(d->user, &count, sizeof(count), 0);
-            snprintf(logmsg, sizeof(logmsg),
-                    "[%s] INFO: richiesta nClients -> %d", d->ip, count);
-            log_event(logmsg);
-        }
-    } while (type == 'C');
     if (!error && type == 'R') {
         int res = registration(d);
         if (res == -2) {
@@ -675,24 +661,80 @@ void *newUser(void *arg) {
     }
 
     /* ----- LOBBY + GAME + ENDGAME: solo se auth ok ----- */
-    if (!error) {
-        insertUser(d->username);
+/* ----- LOBBY + GAME + ENDGAME: solo se auth ok ----- */
+if (!error) {
+    insertUser(d->username);
+
+    pthread_mutex_lock(&lobbyMutex);
+    nReady++;
+    snprintf(logmsg, sizeof(logmsg),
+             "[%s@%s] LOBBY: in attesa (%d/%d)", d->username, d->ip, nReady, nClients);
+    log_event(logmsg);
+    if (nReady == nClients) {
+        gameStarted = 1;
+        log_event("LOBBY: tutti i giocatori pronti, partita in avvio");
+        pthread_create(&timerTid, NULL, (void *)timer, NULL);
+        pthread_cond_broadcast(&lobbyCond); /* sveglia eventuali thread bloccati */
+    }
+    pthread_mutex_unlock(&lobbyMutex);
+
+    /* ----- MINI-LOOP LOBBY -----
+     * Risponde alle richieste "lobby" del client con nClients (int).
+     * Quando gameStarted diventa 1, manda -1 come segnale GO e rompe.
+     * Se il client si disconnette qui, decrementa i contatori e salta al cleanup. */
+    int lobbyOk = 1;
+    while (1) {
         pthread_mutex_lock(&lobbyMutex);
-        nReady++;
-        snprintf(logmsg, sizeof(logmsg),
-                 "[%s@%s] LOBBY: in attesa (%d/%d)", d->username, d->ip, nReady, nClients);
-        log_event(logmsg);
-        if (nReady == nClients) {
-            gameStarted = 1;
-            log_event("LOBBY: tutti i giocatori pronti, partita in avvio");
-            pthread_create(&timerTid, NULL, (void *)timer, NULL);
-            pthread_cond_broadcast(&lobbyCond);
-        } else {
-            while (!gameStarted)
-                pthread_cond_wait(&lobbyCond, &lobbyMutex);
-        }
+        int started = gameStarted;
         pthread_mutex_unlock(&lobbyMutex);
 
+        if (started) {
+            int go = -1;
+            pthread_mutex_lock(&(d->socketWriteMutex));
+            send(d->user, &go, sizeof(go), 0);
+            pthread_mutex_unlock(&(d->socketWriteMutex));
+            break;
+        }
+
+        fd_set rfds;
+        FD_ZERO(&rfds);
+        FD_SET(d->user, &rfds);
+        struct timeval tv = { .tv_sec = 1, .tv_usec = 0 };
+        int ret = select(d->user + 1, &rfds, NULL, NULL, &tv);
+
+        if (ret < 0) { lobbyOk = 0; break; } /* errore select */
+
+        if (ret > 0) {
+            char lbuf[16];
+            int nr = recv(d->user, lbuf, sizeof(lbuf) - 1, 0);
+            if (nr <= 0) {
+                snprintf(logmsg, sizeof(logmsg),
+                         "[%s@%s] LOBBY: client disconnesso in attesa", d->username, d->ip);
+                log_event(logmsg);
+                removeUser(d->username);
+                pthread_mutex_lock(&lobbyMutex);
+                nReady--;
+                nClients--;
+                pthread_mutex_unlock(&lobbyMutex);
+                lobbyOk = 0;
+                break;
+            }
+            lbuf[nr] = '\0';
+            lbuf[strcspn(lbuf, "\r\n")] = 0;
+
+            if (strcmp(lbuf, "lobby") == 0) {
+                pthread_mutex_lock(&lobbyMutex);
+                int nc = nClients;
+                pthread_mutex_unlock(&lobbyMutex);
+                pthread_mutex_lock(&(d->socketWriteMutex));
+                send(d->user, &nc, sizeof(nc), 0);
+                pthread_mutex_unlock(&(d->socketWriteMutex));
+            }
+        }
+        /* ret == 0: timeout, ricontrolla gameStarted al prossimo giro */
+    }
+
+    if (lobbyOk) {
         snprintf(logmsg, sizeof(logmsg), "[%s@%s] LOBBY: partita avviata, inizio gioco", d->username, d->ip);
         log_event(logmsg);
 
@@ -741,6 +783,7 @@ void *newUser(void *arg) {
         }
         recv(d->user, &closeM, 1, 0);
     }
+}
 
     /* ----- CLEANUP ----- */
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa (authOk=%d)", d->ip, d->username, authOk);
@@ -855,9 +898,9 @@ int main() {
                     send(cfd, "R", 1, 0);
                     close(cfd);
                 }
-                continue;   // torna al loop, non break
+                continue;  
             }
-            pthread_mutex_unlock(&lobbyMutex);       // unlock prima di accept
+            pthread_mutex_unlock(&lobbyMutex);
         
             struct sockaddr_in cli;
             socklen_t clen = sizeof(cli);
@@ -882,7 +925,7 @@ int main() {
             for (int i = 0; i < h; i++)
                 d->visited[i] = calloc(w, sizeof(int));
         
-            pthread_mutex_lock(&lobbyMutex);   // ora è libero, nessun deadlock
+            pthread_mutex_lock(&lobbyMutex);
             nClients++;
             pthread_mutex_unlock(&lobbyMutex);
         

@@ -24,6 +24,33 @@ pthread_cond_t exitCond = PTHREAD_COND_INITIALIZER;
 int exitGame = 0;
 int end = 0;
 int terminate = 0;
+
+int authDone = 0;
+
+struct count_args { int sockfd; };
+
+void *countThread(void *arg) {
+    struct count_args *a = (struct count_args *)arg;
+    while (!authDone) {
+        pthread_mutex_lock(&socketMutex);
+        if (authDone) { pthread_mutex_unlock(&socketMutex); break; }
+        send(a->sockfd, "C", 1, 0);
+        int n;
+        recv(a->sockfd, &n, sizeof(int), 0);
+        pthread_mutex_unlock(&socketMutex);
+
+        /* salva cursore, sale di 4 righe, riscrive il contatore, ripristina */
+        printf("\033[s"          /* salva posizione cursore      */
+               "\033[4A"         /* sale di 4 righe              */
+               "\r\033[2K"       /* cancella la riga             */
+               "  Giocatori in lobby: \033[1;32m%d\033[0m"
+               "\033[u",         /* ripristina posizione cursore */
+               n);
+        fflush(stdout);
+        sleep(1);
+    }
+    return NULL;
+}
 /* --------------------------------------------------------------------------
  * Struttura argomenti per il thread di ascolto asincrono.
  * Contiene il socket e i puntatori alle variabili di stato della mappa,
@@ -265,35 +292,45 @@ int main(int argc, char* argv[]) {
         close(sockfd);
         return 1;
     }
-    else if(c == 'A') {
-        printf("Connessione accettata dal server!\n");
+    else if (c == 'A') {
+        printf("Connessione accettata!\n\n");
     }
+    
+    /* avvia il thread di conteggio */
+    struct count_args ca = { sockfd };
+    pthread_t countTid;
+    pthread_create(&countTid, NULL, countThread, &ca);
+    
+    /* menu login — l'utente sceglie mentre il contatore si aggiorna */
+    int choice = -1;
+    do {
+        printf("\n  [1] Registrati\n  [2] Login\n  Scelta: ");
+        fflush(stdout);
+        char choiceBuf[16];
+        int nb = read(STDIN_FILENO, choiceBuf, sizeof(choiceBuf) - 1);
+        if (nb > 0) { choiceBuf[nb] = '\0'; choice = atoi(choiceBuf); }
+    } while (choice < 1 || choice > 2);
+    
+    /* ferma il thread di conteggio prima di usare il socket per l'auth */
+    authDone = 1;
+    pthread_join(countTid, NULL);
 
     system("clear");
     printf("\n======================================\n");
     printf("      LINUX MAZE EXPLORER\n");
     printf("======================================\n\n");
 
-    int choice = -1;
+    choice = -1;
     do {
         printf("  [1] Registrati\n");
         printf("  [2] Login\n");
-        printf("  [3] Giocatori connessi\n");
         printf("  Scelta: ");
         fflush(stdout);
-    
         char choiceBuf[16];
         int nb = read(STDIN_FILENO, choiceBuf, sizeof(choiceBuf) - 1);
         if (nb > 0) { choiceBuf[nb] = '\0'; choice = atoi(choiceBuf); }
-    
-        if (choice == 3) {
-            send(sockfd, "C", 1, 0);
-            int count = 0;
-            recv(sockfd, &count, sizeof(count), 0);
-            printf("\n  Giocatori attualmente connessi: %d\n\n", count);
-            choice = -1;   /* ripresenta il menu */
-        }
     } while (choice < 1 || choice > 2);
+
     int readedbyte = 0;
     char res;
     switch(choice) {

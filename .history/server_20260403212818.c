@@ -582,30 +582,31 @@ void *newUser(void *arg) {
     char logmsg[512];
     int authOk = 0; /* flag: 1 se l'autenticazione e' andata a buon fine */
     int error  = 0; /* flag: 1 se si e' verificato un errore in fase di auth */
+
+    /* ----- PRE-AUTH: rispondi alle richieste di count ----- */
+    while (1) {
+        char peek;
+        int n = recv(d->user, &peek, 1, MSG_PEEK);
+        if (n <= 0) { error = 1; break; }
+        if (peek == 'C') {
+            recv(d->user, &peek, 1, 0); /* consuma la 'C' */
+            pthread_mutex_lock(&lobbyMutex);
+            int cnt = nClients;
+            pthread_mutex_unlock(&lobbyMutex);
+            send(d->user, &cnt, sizeof(int), 0);
+        } else {
+            break; /* 'R' o 'L': procedi con l'auth normale */
+        }
+    }
     /* ----- AUTH ----- */
     char type;
-    int n;
+    int n = recv(d->user, &type, 1, 0);
+    if (n <= 0) {
+        snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: nessun dato ricevuto, client disconnesso", d->ip);
+        log_event(logmsg);
+        error = 1;
+    }
 
-/* loop pre-auth: il client può interrogare quanti giocatori sono connessi */
-    do {
-        n = recv(d->user, &type, 1, 0);
-        if (n <= 0) {
-            snprintf(logmsg, sizeof(logmsg),
-                    "[%s] AUTH: nessun dato ricevuto, client disconnesso", d->ip);
-            log_event(logmsg);
-            error = 1;
-            break;
-        }
-        if (type == 'C') {
-            pthread_mutex_lock(&lobbyMutex);
-            int count = nClients;
-            pthread_mutex_unlock(&lobbyMutex);
-            send(d->user, &count, sizeof(count), 0);
-            snprintf(logmsg, sizeof(logmsg),
-                    "[%s] INFO: richiesta nClients -> %d", d->ip, count);
-            log_event(logmsg);
-        }
-    } while (type == 'C');
     if (!error && type == 'R') {
         int res = registration(d);
         if (res == -2) {
@@ -742,17 +743,28 @@ void *newUser(void *arg) {
         recv(d->user, &closeM, 1, 0);
     }
 
-    /* ----- CLEANUP ----- */
+    /* ----- CLEANUP ----- (eseguito sempre, anche se error=1) */
     snprintf(logmsg, sizeof(logmsg), "[%s@%s] CLEANUP: connessione chiusa (authOk=%d)", d->ip, d->username, authOk);
     log_event(logmsg);
     close(d->user);
+    d->user = -1;   /* invalida il fd cosi' altri thread non lo usano */
 
     pthread_mutex_lock(&lobbyMutex);
     nClients--;
+    snprintf(logmsg, sizeof(logmsg), "SERVER: nClients dopo disconnect = %d", nClients);
+    log_event(logmsg);
+    
     if (nClients == 0) {
         pthread_mutex_lock(&endMutex);
         gameEnd = 1;
         pthread_mutex_unlock(&endMutex);
+    } else if (!gameStarted && nReady > 0 && nReady == nClients) {
+        /* un client si e' disconnesso prima della partita:
+         * i rimanenti sono tutti pronti, avvia la partita */
+        gameStarted = 1;
+        log_event("LOBBY: client disconnesso, partita avviata con i giocatori rimasti");
+        pthread_create(&timerTid, NULL, (void *)timer, NULL);
+        pthread_cond_broadcast(&lobbyCond);
     }
     pthread_mutex_unlock(&lobbyMutex);
 
@@ -855,9 +867,9 @@ int main() {
                     send(cfd, "R", 1, 0);
                     close(cfd);
                 }
-                continue;   // torna al loop, non break
+                continue;  
             }
-            pthread_mutex_unlock(&lobbyMutex);       // unlock prima di accept
+            pthread_mutex_unlock(&lobbyMutex);
         
             struct sockaddr_in cli;
             socklen_t clen = sizeof(cli);
@@ -882,7 +894,7 @@ int main() {
             for (int i = 0; i < h; i++)
                 d->visited[i] = calloc(w, sizeof(int));
         
-            pthread_mutex_lock(&lobbyMutex);   // ora è libero, nessun deadlock
+            pthread_mutex_lock(&lobbyMutex);
             nClients++;
             pthread_mutex_unlock(&lobbyMutex);
         

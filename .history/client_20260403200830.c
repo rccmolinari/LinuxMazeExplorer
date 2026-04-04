@@ -278,22 +278,13 @@ int main(int argc, char* argv[]) {
     do {
         printf("  [1] Registrati\n");
         printf("  [2] Login\n");
-        printf("  [3] Giocatori connessi\n");
         printf("  Scelta: ");
         fflush(stdout);
-    
         char choiceBuf[16];
         int nb = read(STDIN_FILENO, choiceBuf, sizeof(choiceBuf) - 1);
         if (nb > 0) { choiceBuf[nb] = '\0'; choice = atoi(choiceBuf); }
-    
-        if (choice == 3) {
-            send(sockfd, "C", 1, 0);
-            int count = 0;
-            recv(sockfd, &count, sizeof(count), 0);
-            printf("\n  Giocatori attualmente connessi: %d\n\n", count);
-            choice = -1;   /* ripresenta il menu */
-        }
     } while (choice < 1 || choice > 2);
+
     int readedbyte = 0;
     char res;
     switch(choice) {

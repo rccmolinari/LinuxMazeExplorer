@@ -582,30 +582,16 @@ void *newUser(void *arg) {
     char logmsg[512];
     int authOk = 0; /* flag: 1 se l'autenticazione e' andata a buon fine */
     int error  = 0; /* flag: 1 se si e' verificato un errore in fase di auth */
+
     /* ----- AUTH ----- */
     char type;
-    int n;
+    int n = recv(d->user, &type, 1, 0);
+    if (n <= 0) {
+        snprintf(logmsg, sizeof(logmsg), "[%s] AUTH: nessun dato ricevuto, client disconnesso", d->ip);
+        log_event(logmsg);
+        error = 1;
+    }
 
-/* loop pre-auth: il client può interrogare quanti giocatori sono connessi */
-    do {
-        n = recv(d->user, &type, 1, 0);
-        if (n <= 0) {
-            snprintf(logmsg, sizeof(logmsg),
-                    "[%s] AUTH: nessun dato ricevuto, client disconnesso", d->ip);
-            log_event(logmsg);
-            error = 1;
-            break;
-        }
-        if (type == 'C') {
-            pthread_mutex_lock(&lobbyMutex);
-            int count = nClients;
-            pthread_mutex_unlock(&lobbyMutex);
-            send(d->user, &count, sizeof(count), 0);
-            snprintf(logmsg, sizeof(logmsg),
-                    "[%s] INFO: richiesta nClients -> %d", d->ip, count);
-            log_event(logmsg);
-        }
-    } while (type == 'C');
     if (!error && type == 'R') {
         int res = registration(d);
         if (res == -2) {
@@ -855,9 +841,9 @@ int main() {
                     send(cfd, "R", 1, 0);
                     close(cfd);
                 }
-                continue;   // torna al loop, non break
+                continue;  
             }
-            pthread_mutex_unlock(&lobbyMutex);       // unlock prima di accept
+            pthread_mutex_unlock(&lobbyMutex);
         
             struct sockaddr_in cli;
             socklen_t clen = sizeof(cli);
@@ -882,7 +868,7 @@ int main() {
             for (int i = 0; i < h; i++)
                 d->visited[i] = calloc(w, sizeof(int));
         
-            pthread_mutex_lock(&lobbyMutex);   // ora è libero, nessun deadlock
+            pthread_mutex_lock(&lobbyMutex);
             nClients++;
             pthread_mutex_unlock(&lobbyMutex);
         
