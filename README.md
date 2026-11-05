@@ -160,7 +160,7 @@ The example at the top of this page was generated with a larger map: width 21-31
 - Passwords are stored in plain text and login only checks the username: the account system is not meant for real use.
 - The server runs a single match per execution.
 
-## Author
+## Authors
 
-Rocco Molinari
-Daniele Megna
+-Rocco Molinari
+-Daniele Megna
